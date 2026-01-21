@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, Home, Activity, Users, Truck, FileText, Shield, Eye, MapPin } from 'lucide-react';
 
 // Portal page components
@@ -12,6 +12,9 @@ import AdminOverrides from './src/components/AdminOverrides';
 import ShiftDetailView from './src/components/ShiftDetailView';
 import OdometerReview from './src/components/OdometerReview';
 import LiveTracking from './src/pages/LiveTracking';
+import { Login } from './src/components/Login';
+import { ProtectedRoute } from './src/components/ProtectedRoute';
+import { localLogout } from './src/utils/localAuth';
 
 interface NavItem {
   id: string;
@@ -33,6 +36,13 @@ const navItems: NavItem[] = [
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localLogout();
+    navigate('/login');
+    onClose();
+  };
 
   return (
     <>
@@ -73,7 +83,10 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           </nav>
 
           <div className="mt-8 pt-8 border-t border-border">
-            <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-muted w-full transition-colors">
+            <button
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-muted w-full transition-colors"
+              onClick={handleLogout}
+            >
               <LogOut className="w-5 h-5" />
               <span>Logout</span>
             </button>
@@ -95,47 +108,57 @@ function App() {
 
   return (
     <Router basename="/portal">
-      <div 
-        className="flex h-screen bg-background text-foreground"
-        style={{
-          backgroundColor: '#0a0a0b',
-          color: '#e5e5e7'
-        }}
-      >
-        {/* Sidebar */}
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <div
+                className="flex h-screen bg-background text-foreground"
+                style={{
+                  backgroundColor: '#0a0a0b',
+                  color: '#e5e5e7',
+                }}
+              >
+                {/* Sidebar */}
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between md:justify-end">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden text-foreground hover:bg-muted p-2 rounded-lg"
-            >
-              {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-            <div className="text-sm text-muted-foreground">
-              translinelogistics.org/portal
-            </div>
-          </div>
+                {/* Main content */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Header */}
+                  <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between md:justify-end">
+                    <button
+                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                      className="md:hidden text-foreground hover:bg-muted p-2 rounded-lg"
+                    >
+                      {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
+                    <div className="text-sm text-muted-foreground">
+                      translinelogistics.org/portal
+                    </div>
+                  </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-auto">
-            <Routes>
-              <Route path="/" element={<OverviewDashboard onViewShift={setSelectedShift} />} />
-              <Route path="/live-shifts" element={<LiveShiftsMonitor onViewShift={setSelectedShift} />} />
-              <Route path="/live-tracking" element={<LiveTracking />} />
-              <Route path="/drivers" element={<DriversManagement />} />
-              <Route path="/vehicles" element={<VehiclesManagement />} />
-              <Route path="/events" element={<EventLogs />} />
-              <Route path="/odometer" element={<OdometerReview />} />
-              <Route path="/admin" element={<AdminOverrides />} />
-              <Route path="/shift/:shiftId" element={<ShiftDetailView shiftId={selectedShift} />} />
-            </Routes>
-          </div>
-        </div>
-      </div>
+                  {/* Content */}
+                  <div className="flex-1 overflow-auto">
+                    <Routes>
+                      <Route path="/" element={<OverviewDashboard onViewShift={setSelectedShift} />} />
+                      <Route path="/live-shifts" element={<LiveShiftsMonitor onViewShift={setSelectedShift} />} />
+                      <Route path="/live-tracking" element={<LiveTracking />} />
+                      <Route path="/drivers" element={<DriversManagement />} />
+                      <Route path="/vehicles" element={<VehiclesManagement />} />
+                      <Route path="/events" element={<EventLogs />} />
+                      <Route path="/odometer" element={<OdometerReview />} />
+                      <Route path="/admin" element={<AdminOverrides />} />
+                      <Route path="/shift/:shiftId" element={<ShiftDetailView shiftId={selectedShift} />} />
+                    </Routes>
+                  </div>
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </Router>
   );
 }

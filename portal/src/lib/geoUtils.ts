@@ -1,21 +1,35 @@
-import distance from '@turf/distance';
-import { point } from '@turf/helpers';
 import { LocationLog, DriverStatus } from '../types/location';
 
-/**
- * Calculate distance between two coordinates using Haversine formula via Turf.js
- * @param coord1 First coordinate
- * @param coord2 Second coordinate
- * @returns Distance in meters
- */
-export function getDistance(
-  coord1: { lat: number; lng: number },
-  coord2: { lat: number; lng: number }
-): number {
-  const from = point([coord1.lng, coord1.lat]);
-  const to = point([coord2.lng, coord2.lat]);
-  const distanceKm = distance(from, to, { units: 'kilometers' });
-  return distanceKm * 1000; // Convert to meters
+type CoordinateInput = [number, number] | { lat: number; lng: number };
+
+function toLngLat(coord: CoordinateInput): [number, number] {
+  if (Array.isArray(coord)) return coord;
+  return [coord.lng, coord.lat];
+}
+
+// No external deps. Uses Haversine distance.
+// Coordinates are [lng, lat] (GeoJSON style).
+export function getDistance(coord1: CoordinateInput, coord2: CoordinateInput) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+
+  const [lng1, lat1] = toLngLat(coord1);
+  const [lng2, lat2] = toLngLat(coord2);
+
+  const R = 6371000; // metres
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Optional alias if your code expects getDistance()
+export function getDistanceMeters(coord1: CoordinateInput, coord2: CoordinateInput) {
+  return getDistance(coord1, coord2);
 }
 
 /**
