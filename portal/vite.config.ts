@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/portal/',
   build: {
-    outDir: '../dist/portal',
-    emptyOutDir: false
+    outDir: '../dist-portal',
+    emptyOutDir: true
   }
 })
