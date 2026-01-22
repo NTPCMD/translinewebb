@@ -50,7 +50,7 @@ export function Login() {
         </form>
 
         <div className="text-xs text-center text-muted-foreground">
-          Temporary local login (will be replaced later)
+          Temporary admin/admin login
         </div>
       </Card>
     </div>
