@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, Home, Activity, Users, Truck, FileText, Shield, Eye, MapPin } from 'lucide-react';
 
 // Portal page components
@@ -36,17 +36,10 @@ const navItems: NavItem[] = [
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const handleLogout = () => {
     localLogout();
-    localStorage.removeItem('supabase.auth.token');
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    navigate('/login');
+    window.location.href = '/portal/login';
     onClose();
   };
 
@@ -90,6 +83,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
           <div className="mt-8 pt-8 border-t border-border">
             <button
+              type="button"
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-muted w-full transition-colors"
               onClick={handleLogout}
             >
