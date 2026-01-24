@@ -4,38 +4,27 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --config vite.config.ts",
-    "build": "vite build --config vite.config.ts",
-    "preview": "vite preview --config vite.config.ts"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.1",
-    "@radix-ui/react-primitive": "^2.0.0",
-    "@radix-ui/react-scroll-area": "^1.2.10",
-    "@radix-ui/react-separator": "^1.1.8",
-    "@radix-ui/react-switch": "^1.2.6",
-    "@radix-ui/react-tabs": "^1.1.13",
-    "@supabase/supabase-js": "^2.38.0",
-    "@turf/distance": "^6.5.0",
-    "@turf/helpers": "^6.5.0",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.0.0",
-    "date-fns": "^3.6.0",
-    "lucide-react": "0.460.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-resizable-panels": "^4.4.0",
-    "react-router-dom": "^6.20.0",
-    "tailwind-merge": "^2.2.0"
+    "class-variance-authority": "file:../node_modules/class-variance-authority",
+    "clsx": "file:../node_modules/clsx",
+    "date-fns": "file:../node_modules/date-fns",
+    "lucide-react": "file:../node_modules/lucide-react",
+    "react": "file:../node_modules/react",
+    "react-dom": "file:../node_modules/react-dom",
+    "react-router": "file:../node_modules/react-router",
+    "react-router-dom": "file:../node_modules/react-router-dom",
+    "tailwind-merge": "file:../node_modules/tailwind-merge"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "4.3.4",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14",
-    "typescript": "5.6.3",
-    "vite": "5.4.10"
+    "@vitejs/plugin-react": "file:./vendor/vite-plugin-react",
+    "autoprefixer": "file:../node_modules/autoprefixer",
+    "postcss": "file:../node_modules/postcss",
+    "tailwindcss": "file:../node_modules/tailwindcss",
+    "typescript": "file:../node_modules/typescript",
+    "vite": "file:../node_modules/vite"
   }
 }
