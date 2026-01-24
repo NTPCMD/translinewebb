@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     middlewareMode: true,
   },
+  build: {
+    assetsInlineLimit: 0,
+  },
 });
