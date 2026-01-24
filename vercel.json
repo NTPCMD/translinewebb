@@ -1,7 +1,15 @@
 {
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "^/portal/?$", "dest": "/portal/index.html" },
-    { "src": "^/portal/.*$", "dest": "/portal/index.html" }
+  "rewrites": [
+    { "source": "/portal/assets/(.*)", "destination": "/portal/assets/$1" },
+    { "source": "/portal", "destination": "/portal/index.html" },
+    { "source": "/portal/(.*)", "destination": "/portal/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/portal/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }
