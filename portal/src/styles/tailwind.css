@@ -1,4 +1,15 @@
-@import 'tailwindcss' source(none);
-@source '../**/*.{js,ts,jsx,tsx}';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .outline-ring {
+    outline-color: hsl(var(--ring));
+  }
+
+  .outline-ring\/50 {
+    outline-color: hsl(var(--ring) / 0.5);
+  }
+}
 
 @import 'tw-animate-css';
