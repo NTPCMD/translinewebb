@@ -1,55 +1,106 @@
-// Main dashboard page with widgets and charts
-import React from 'react';
+// Main dashboard page with real data from Supabase
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { Users, Truck, Calendar, Wrench, AlertCircle, TrendingUp } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-
-// Mock data - replace with real Supabase data
-const stats = [
-  { name: 'Total Drivers', value: '48', icon: Users, change: '+4 this month', color: 'bg-blue-500' },
-  { name: 'Active Drivers', value: '12', icon: TrendingUp, change: 'Currently online', color: 'bg-green-500' },
-  { name: 'Total Vehicles', value: '36', icon: Truck, change: '34 operational', color: 'bg-purple-500' },
-  { name: 'Active Shifts', value: '8', icon: Calendar, change: 'Today', color: 'bg-orange-500' },
-  { name: 'Due for Service', value: '5', icon: Wrench, change: '2 overdue', color: 'bg-yellow-500' },
-  { name: 'Alerts / Issues', value: '3', icon: AlertCircle, change: 'Requires attention', color: 'bg-red-500' },
-];
-
-const driverActivityData = [
-  { month: 'Jan', active: 8, total: 42 },
-  { month: 'Feb', active: 10, total: 43 },
-  { month: 'Mar', active: 12, total: 44 },
-  { month: 'Apr', active: 9, total: 45 },
-  { month: 'May', active: 11, total: 46 },
-  { month: 'Jun', active: 14, total: 48 },
-];
-
-const vehicleUsageData = [
-  { day: 'Mon', usage: 28 },
-  { day: 'Tue', usage: 32 },
-  { day: 'Wed', usage: 30 },
-  { day: 'Thu', usage: 34 },
-  { day: 'Fri', usage: 36 },
-  { day: 'Sat', usage: 24 },
-  { day: 'Sun', usage: 18 },
-];
-
-const maintenanceCostData = [
-  { month: 'Jan', cost: 12000 },
-  { month: 'Feb', cost: 15000 },
-  { month: 'Mar', cost: 11000 },
-  { month: 'Apr', cost: 18000 },
-  { month: 'May', cost: 13000 },
-  { month: 'Jun', cost: 16000 },
-];
-
-const recentAlerts = [
-  { id: 1, vehicle: 'VAN-001', message: 'Oil change overdue', severity: 'high', time: '2 hours ago' },
-  { id: 2, vehicle: 'TRK-045', message: 'Inspection due in 3 days', severity: 'medium', time: '5 hours ago' },
-  { id: 3, vehicle: 'VAN-023', message: 'Driver reported minor damage', severity: 'medium', time: '1 day ago' },
-];
+import { Users, Truck, Calendar, Wrench, AlertCircle, TrendingUp, Loader } from 'lucide-react';
+import { getDashboardStats, DashboardStats, listActivityLogs, ActivityLog } from '@/lib/db/dashboard';
 
 export function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setError(null);
+        const [dashboardStats, logs] = await Promise.all([
+          getDashboardStats(),
+          listActivityLogs(10),
+        ]);
+        setStats(dashboardStats);
+        setActivityLogs(logs);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+          <p className="text-gray-400">Overview of your fleet operations</p>
+        </div>
+        <div className="flex items-center justify-center h-96">
+          <div className="flex flex-col items-center gap-2">
+            <Loader className="w-8 h-8 text-[#FF6B35] animate-spin" />
+            <p className="text-gray-400">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+          <p className="text-gray-400">Overview of your fleet operations</p>
+        </div>
+        <Card className="bg-red-950 border-red-900">
+          <CardContent className="p-6">
+            <p className="text-red-200">{error || 'Failed to load dashboard'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const statsCards = [
+    {
+      name: 'Total Drivers',
+      value: stats.totalDrivers.toString(),
+      icon: Users,
+      change: `${stats.activeDrivers} online`,
+      color: 'bg-blue-500',
+    },
+    {
+      name: 'Total Vehicles',
+      value: stats.totalVehicles.toString(),
+      icon: Truck,
+      change: `${stats.activeVehicles} active`,
+      color: 'bg-purple-500',
+    },
+    {
+      name: 'Active Shifts',
+      value: stats.activeShifts.toString(),
+      icon: Calendar,
+      change: `${stats.todayShifts} today`,
+      color: 'bg-orange-500',
+    },
+    {
+      name: 'Due for Service',
+      value: stats.vehiclesInMaintenance.toString(),
+      icon: Wrench,
+      change: `${stats.pendingMaintenance} pending`,
+      color: 'bg-yellow-500',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -59,8 +110,8 @@ export function DashboardPage() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.map((stat) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statsCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.name} className="bg-[#161616] border-gray-800">
@@ -71,7 +122,7 @@ export function DashboardPage() {
                     <p className="text-3xl font-bold text-white mb-1">{stat.value}</p>
                     <p className="text-xs text-gray-500">{stat.change}</p>
                   </div>
-                  <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
+                  <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                 </div>
@@ -81,137 +132,79 @@ export function DashboardPage() {
         })}
       </div>
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Driver Activity Chart */}
+      {/* Activity Feed */}
+      <Card className="bg-[#161616] border-gray-800">
+        <CardHeader>
+          <CardTitle className="text-white">Recent Activity</CardTitle>
+          <CardDescription className="text-gray-400">Admin actions and system events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activityLogs.length === 0 ? (
+            <p className="text-gray-400 text-sm">No recent activity</p>
+          ) : (
+            <div className="space-y-4">
+              {activityLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="flex items-start justify-between p-3 bg-[#0F0F0F] rounded-lg border border-gray-800"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white capitalize">{log.action}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {log.resource_type} · {log.resource_id}
+                    </p>
+                    {log.details && (
+                      <p className="text-xs text-gray-400 mt-1">{log.details}</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                    {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-[#161616] border-gray-800">
           <CardHeader>
-            <CardTitle className="text-white">Driver Activity</CardTitle>
-            <CardDescription className="text-gray-400">Active vs total drivers over time</CardDescription>
+            <CardTitle className="text-white">Fleet Status</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={driverActivityData}>
-                <defs>
-                  <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#FF6B35" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#161616', border: '1px solid #333', borderRadius: '8px' }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="active"
-                  stroke="#FF6B35"
-                  fillOpacity={1}
-                  fill="url(#colorActive)"
-                />
-                <Line type="monotone" dataKey="total" stroke="#666" strokeDasharray="5 5" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-[#0F0F0F] rounded border border-gray-800">
+              <span className="text-gray-300">Drivers Active</span>
+              <span className="text-lg font-bold text-[#FF6B35]">{stats.activeDrivers}/{stats.totalDrivers}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-[#0F0F0F] rounded border border-gray-800">
+              <span className="text-gray-300">Vehicles Active</span>
+              <span className="text-lg font-bold text-[#FF6B35]">{stats.activeVehicles}/{stats.totalVehicles}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-[#0F0F0F] rounded border border-gray-800">
+              <span className="text-gray-300">Shifts Active</span>
+              <span className="text-lg font-bold text-green-400">{stats.activeShifts}</span>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Vehicle Usage Chart */}
         <Card className="bg-[#161616] border-gray-800">
           <CardHeader>
-            <CardTitle className="text-white">Vehicle Usage</CardTitle>
-            <CardDescription className="text-gray-400">Vehicles in use this week</CardDescription>
+            <CardTitle className="text-white">Maintenance Queue</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={vehicleUsageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="day" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#161616', border: '1px solid #333', borderRadius: '8px' }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Bar dataKey="usage" fill="#FF6B35" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-[#0F0F0F] rounded border border-gray-800">
+              <span className="text-gray-300">Vehicles in Maintenance</span>
+              <span className="text-lg font-bold text-yellow-400">{stats.vehiclesInMaintenance}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-[#0F0F0F] rounded border border-gray-800">
+              <span className="text-gray-300">Pending Items</span>
+              <span className="text-lg font-bold text-orange-400">{stats.pendingMaintenance}</span>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Maintenance Cost Trend */}
-      <Card className="bg-[#161616] border-gray-800">
-        <CardHeader>
-          <CardTitle className="text-white">Maintenance Cost Trend</CardTitle>
-          <CardDescription className="text-gray-400">Monthly maintenance expenses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={maintenanceCostData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="month" stroke="#666" />
-              <YAxis stroke="#666" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#161616', border: '1px solid #333', borderRadius: '8px' }}
-                labelStyle={{ color: '#fff' }}
-                formatter={(value) => `$${value.toLocaleString()}`}
-              />
-              <Line
-                type="monotone"
-                dataKey="cost"
-                stroke="#FF6B35"
-                strokeWidth={2}
-                dot={{ fill: '#FF6B35', r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Recent Alerts */}
-      <Card className="bg-[#161616] border-gray-800">
-        <CardHeader>
-          <CardTitle className="text-white">Recent Alerts</CardTitle>
-          <CardDescription className="text-gray-400">Issues requiring attention</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentAlerts.map((alert) => (
-              <div
-                key={alert.id}
-                className="flex items-center justify-between p-4 bg-[#0F0F0F] rounded-lg border border-gray-800"
-              >
-                <div className="flex items-center gap-4">
-                  <AlertCircle
-                    className={`w-5 h-5 ${
-                      alert.severity === 'high' ? 'text-red-500' : 'text-yellow-500'
-                    }`}
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-white">{alert.vehicle}</p>
-                    <p className="text-xs text-gray-400">{alert.message}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge
-                    variant={alert.severity === 'high' ? 'destructive' : 'secondary'}
-                    className={
-                      alert.severity === 'high'
-                        ? 'bg-red-950 text-red-400 border-red-900'
-                        : 'bg-yellow-950 text-yellow-400 border-yellow-900'
-                    }
-                  >
-                    {alert.severity}
-                  </Badge>
-                  <p className="text-xs text-gray-500 mt-1">{alert.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

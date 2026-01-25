@@ -1,128 +1,130 @@
 // Maintenance tracking and scheduling page
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { Search, Plus, Eye, Wrench, AlertTriangle, CheckCircle, Calendar, DollarSign } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
+import { Label } from '@/app/components/ui/label';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
+import { Search, Plus, Eye, Wrench, AlertTriangle, CheckCircle, Calendar, DollarSign, Trash2, Loader } from 'lucide-react';
 import { format } from 'date-fns';
-
-// Mock data - replace with Supabase queries
-const mockMaintenanceStatus = [
-  {
-    id: '1',
-    vehiclePlate: 'VAN-001',
-    lastServiceDate: '2025-12-15',
-    lastServiceOdometer: 44500,
-    nextServiceOdometer: 49500,
-    nextServiceDate: '2026-02-15',
-    currentOdometer: 45230,
-    status: 'ok',
-  },
-  {
-    id: '2',
-    vehiclePlate: 'TRK-045',
-    lastServiceDate: '2025-11-20',
-    lastServiceOdometer: 75000,
-    nextServiceOdometer: 80000,
-    nextServiceDate: '2026-01-20',
-    currentOdometer: 78450,
-    status: 'due_soon',
-  },
-  {
-    id: '3',
-    vehiclePlate: 'VAN-023',
-    lastServiceDate: '2025-10-10',
-    lastServiceOdometer: 58000,
-    nextServiceOdometer: 63000,
-    nextServiceDate: '2025-12-10',
-    currentOdometer: 64200,
-    status: 'overdue',
-  },
-  {
-    id: '4',
-    vehiclePlate: 'TRK-089',
-    lastServiceDate: '2026-01-05',
-    lastServiceOdometer: 51000,
-    nextServiceOdometer: 56000,
-    nextServiceDate: '2026-03-05',
-    currentOdometer: 52110,
-    status: 'ok',
-  },
-];
-
-const mockMaintenanceLogs = [
-  {
-    id: '1',
-    vehiclePlate: 'VAN-001',
-    serviceType: 'Oil Change',
-    serviceDate: '2025-12-15',
-    odometer: 44500,
-    cost: 450,
-    provider: 'AutoCare Services',
-  },
-  {
-    id: '2',
-    vehiclePlate: 'TRK-045',
-    serviceType: 'Brake Inspection',
-    serviceDate: '2025-11-20',
-    odometer: 75000,
-    cost: 850,
-    provider: 'Fleet Maintenance Co.',
-  },
-  {
-    id: '3',
-    vehiclePlate: 'VAN-023',
-    serviceType: 'Full Service',
-    serviceDate: '2025-10-10',
-    odometer: 58000,
-    cost: 1200,
-    provider: 'AutoCare Services',
-  },
-];
+import { listMaintenanceItems, listPendingMaintenanceItems, createMaintenanceItem, MaintenanceItem, countPendingMaintenance } from '@/lib/db/maintenance';
 
 export function MaintenancePage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [maintenanceStatus] = useState(mockMaintenanceStatus);
-  const [maintenanceLogs] = useState(mockMaintenanceLogs);
+  const [maintenanceItems, setMaintenanceItems] = useState<MaintenanceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [formData, setFormData] = useState({
+    vehicleId: '',
+    serviceType: '',
+    scheduledDate: '',
+  });
 
-  const filteredStatus = maintenanceStatus.filter((item) =>
-    item.vehiclePlate.toLowerCase().includes(searchQuery.toLowerCase())
+  // Fetch maintenance items on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [itemsList, pending] = await Promise.all([
+          listMaintenanceItems(),
+          countPendingMaintenance(),
+        ]);
+        setMaintenanceItems(itemsList);
+        setPendingCount(pending);
+        setError(null);
+      } catch (err) {
+        setError('Failed to load maintenance data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const filteredItems = maintenanceItems.filter((item) =>
+    item.service_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.vehicle_id?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredLogs = maintenanceLogs.filter((log) =>
-    log.vehiclePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.serviceType.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleAddMaintenance = async () => {
+    if (!formData.vehicleId || !formData.serviceType) {
+      setError('Required fields are missing');
+      return;
+    }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ok':
-        return { className: 'bg-green-950 text-green-400 border-green-900', label: 'OK', icon: CheckCircle };
-      case 'due_soon':
-        return { className: 'bg-yellow-950 text-yellow-400 border-yellow-900', label: 'Due Soon', icon: AlertTriangle };
-      case 'overdue':
-        return { className: 'bg-red-950 text-red-400 border-red-900', label: 'Overdue', icon: AlertTriangle };
-      default:
-        return { className: 'bg-gray-800 text-gray-400 border-gray-700', label: 'Unknown', icon: AlertTriangle };
+    try {
+      const newItem = await createMaintenanceItem({
+        vehicleId: formData.vehicleId,
+        serviceType: formData.serviceType,
+        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : undefined,
+        status: 'pending',
+      });
+      setMaintenanceItems([...maintenanceItems, newItem]);
+      setPendingCount(pendingCount + 1);
+      setDialogOpen(false);
+      setFormData({ vehicleId: '', serviceType: '', scheduledDate: '' });
+      setError(null);
+    } catch (err) {
+      setError('Failed to create maintenance item');
+      console.error(err);
     }
   };
 
-  const totalCost = maintenanceLogs.reduce((sum, log) => sum + log.cost, 0);
-  const overdueCount = maintenanceStatus.filter((s) => s.status === 'overdue').length;
-  const dueSoonCount = maintenanceStatus.filter((s) => s.status === 'due_soon').length;
+  const handleDeleteClick = (item: MaintenanceItem) => {
+    setSelectedItem(item);
+    setDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedItem) return;
+
+    try {
+      // Note: implement delete in maintenance.ts when ready
+      setMaintenanceItems(maintenanceItems.filter((i) => i.id !== selectedItem.id));
+      if (selectedItem.status === 'pending') {
+        setPendingCount(Math.max(0, pendingCount - 1));
+      }
+      setDeleteDialog(false);
+      setSelectedItem(null);
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete maintenance item');
+      console.error(err);
+    }
+  };
+
+  const completedCount = maintenanceItems.filter((i) => i.status === 'completed').length;
+  const overdueCount = maintenanceItems.filter((i) => i.status === 'overdue').length;
 
   return (
     <div className="space-y-6">
+      {/* Error message */}
+      {error && (
+        <Card className="bg-red-950 border-red-900">
+          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        </Card>
+      )}
+
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Maintenance</h1>
           <p className="text-gray-400">Track vehicle maintenance and service schedules</p>
         </div>
-        <Button className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white">
+        <Button
+          onClick={() => setDialogOpen(true)}
+          className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Schedule Service
         </Button>
@@ -138,7 +140,7 @@ export function MaintenancePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400 mb-1">Overdue</p>
-                <p className="text-3xl font-bold text-red-400">{overdueCount}</p>
+                <p className="text-3xl font-bold text-red-400">{loading ? '-' : overdueCount}</p>
               </div>
             </div>
           </CardContent>
@@ -150,8 +152,8 @@ export function MaintenancePage() {
                 <Calendar className="w-6 h-6 text-yellow-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Due Soon</p>
-                <p className="text-3xl font-bold text-yellow-400">{dueSoonCount}</p>
+                <p className="text-sm text-gray-400 mb-1">Pending</p>
+                <p className="text-3xl font-bold text-yellow-400">{loading ? '-' : pendingCount}</p>
               </div>
             </div>
           </CardContent>
@@ -163,10 +165,8 @@ export function MaintenancePage() {
                 <CheckCircle className="w-6 h-6 text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Up to Date</p>
-                <p className="text-3xl font-bold text-green-400">
-                  {maintenanceStatus.filter((s) => s.status === 'ok').length}
-                </p>
+                <p className="text-sm text-gray-400 mb-1">Completed</p>
+                <p className="text-3xl font-bold text-green-400">{loading ? '-' : completedCount}</p>
               </div>
             </div>
           </CardContent>
@@ -175,239 +175,177 @@ export function MaintenancePage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-950 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-blue-400" />
+                <Wrench className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Total Cost</p>
-                <p className="text-3xl font-bold text-blue-400">${(totalCost / 1000).toFixed(1)}k</p>
+                <p className="text-sm text-gray-400 mb-1">Total Items</p>
+                <p className="text-3xl font-bold text-blue-400">{loading ? '-' : maintenanceItems.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs for different views */}
-      <Tabs defaultValue="status" className="space-y-6">
-        <TabsList className="bg-[#161616] border border-gray-800">
-          <TabsTrigger value="status" className="data-[state=active]:bg-[#FF6B35]">
-            Service Status
-          </TabsTrigger>
-          <TabsTrigger value="history" className="data-[state=active]:bg-[#FF6B35]">
-            Service History
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="data-[state=active]:bg-[#FF6B35]">
-            Upcoming Services
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Service Status Tab */}
-        <TabsContent value="status" className="space-y-4">
-          <Card className="bg-[#161616] border-gray-800">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-white">Vehicle Maintenance Status</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Current maintenance status for all vehicles
-                  </CardDescription>
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <Input
-                    type="search"
-                    placeholder="Search vehicles..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-[#0F0F0F] border-gray-700 text-white placeholder:text-gray-500"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-800 hover:bg-transparent">
-                      <TableHead className="text-gray-400">Vehicle</TableHead>
-                      <TableHead className="text-gray-400">Last Service</TableHead>
-                      <TableHead className="text-gray-400">Current Odometer</TableHead>
-                      <TableHead className="text-gray-400">Next Service Due</TableHead>
-                      <TableHead className="text-gray-400">KM Until Service</TableHead>
-                      <TableHead className="text-gray-400">Status</TableHead>
-                      <TableHead className="text-gray-400 text-right">Actions</TableHead>
+      {/* Maintenance items table */}
+      <Card className="bg-[#161616] border-gray-800">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="text-white">Maintenance Schedule</CardTitle>
+              <CardDescription className="text-gray-400">
+                Manage all maintenance items and service records
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Input
+                type="search"
+                placeholder="Search maintenance..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-[#0F0F0F] border-gray-700 text-white placeholder:text-gray-500"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader className="w-8 h-8 text-[#FF6B35] animate-spin" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-800 hover:bg-transparent">
+                    <TableHead className="text-gray-400">Service Type</TableHead>
+                    <TableHead className="text-gray-400">Vehicle ID</TableHead>
+                    <TableHead className="text-gray-400">Scheduled Date</TableHead>
+                    <TableHead className="text-gray-400">Status</TableHead>
+                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        No maintenance items found
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStatus.map((item) => {
-                      const statusInfo = getStatusBadge(item.status);
-                      const StatusIcon = statusInfo.icon;
-                      const kmUntilService = item.nextServiceOdometer - item.currentOdometer;
-
-                      return (
-                        <TableRow key={item.id} className="border-gray-800">
-                          <TableCell className="font-medium text-white">{item.vehiclePlate}</TableCell>
-                          <TableCell className="text-gray-300">
-                            <div className="space-y-1">
-                              <div>{format(new Date(item.lastServiceDate), 'MMM dd, yyyy')}</div>
-                              <div className="text-xs text-gray-500">
-                                @ {item.lastServiceOdometer.toLocaleString()} km
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-gray-300">
-                            {item.currentOdometer.toLocaleString()} km
-                          </TableCell>
-                          <TableCell className="text-gray-300">
-                            <div className="space-y-1">
-                              <div>{format(new Date(item.nextServiceDate), 'MMM dd, yyyy')}</div>
-                              <div className="text-xs text-gray-500">
-                                @ {item.nextServiceOdometer.toLocaleString()} km
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={`font-medium ${
-                                kmUntilService < 0
-                                  ? 'text-red-400'
-                                  : kmUntilService < 1000
-                                  ? 'text-yellow-400'
-                                  : 'text-green-400'
-                              }`}
-                            >
-                              {kmUntilService < 0
-                                ? `${Math.abs(kmUntilService)} km overdue`
-                                : `${kmUntilService.toLocaleString()} km`}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={statusInfo.className}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {statusInfo.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-gray-400 hover:text-white h-8 w-8 p-0"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-gray-400 hover:text-white h-8 w-8 p-0"
-                              >
-                                <Wrench className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Service History Tab */}
-        <TabsContent value="history" className="space-y-4">
-          <Card className="bg-[#161616] border-gray-800">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-white">Service History</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Past maintenance and service records
-                  </CardDescription>
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <Input
-                    type="search"
-                    placeholder="Search history..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-[#0F0F0F] border-gray-700 text-white placeholder:text-gray-500"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-800 hover:bg-transparent">
-                      <TableHead className="text-gray-400">Vehicle</TableHead>
-                      <TableHead className="text-gray-400">Service Type</TableHead>
-                      <TableHead className="text-gray-400">Date</TableHead>
-                      <TableHead className="text-gray-400">Odometer</TableHead>
-                      <TableHead className="text-gray-400">Provider</TableHead>
-                      <TableHead className="text-gray-400">Cost</TableHead>
-                      <TableHead className="text-gray-400 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.map((log) => (
-                      <TableRow key={log.id} className="border-gray-800">
-                        <TableCell className="font-medium text-white">{log.vehiclePlate}</TableCell>
-                        <TableCell className="text-gray-300">{log.serviceType}</TableCell>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <TableRow key={item.id} className="border-gray-800">
+                        <TableCell className="font-medium text-white">{item.service_type}</TableCell>
+                        <TableCell className="text-gray-300">{item.vehicle_id}</TableCell>
                         <TableCell className="text-gray-300">
-                          {format(new Date(log.serviceDate), 'MMM dd, yyyy')}
+                          {item.scheduled_date
+                            ? format(new Date(item.scheduled_date), 'MMM dd, yyyy')
+                            : 'Not scheduled'}
                         </TableCell>
-                        <TableCell className="text-gray-300">
-                          {log.odometer.toLocaleString()} km
-                        </TableCell>
-                        <TableCell className="text-gray-300">{log.provider}</TableCell>
-                        <TableCell className="text-gray-300 font-medium">
-                          ${log.cost.toLocaleString()}
+                        <TableCell>
+                          <Badge
+                            className={
+                              item.status === 'pending'
+                                ? 'bg-yellow-950 text-yellow-400 border-yellow-900'
+                                : item.status === 'completed'
+                                ? 'bg-green-950 text-green-400 border-green-900'
+                                : 'bg-red-950 text-red-400 border-red-900'
+                            }
+                          >
+                            {item.status}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-gray-400 hover:text-white h-8 w-8 p-0"
+                              className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
+                              onClick={() => handleDeleteClick(item)}
                             >
-                              <Eye className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Upcoming Services Tab */}
-        <TabsContent value="schedule" className="space-y-4">
-          <Card className="bg-[#161616] border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Upcoming Scheduled Services</CardTitle>
-              <CardDescription className="text-gray-400">
-                View and manage upcoming maintenance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 mb-4">No upcoming services scheduled</p>
-                <Button className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Schedule Service
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Add Maintenance Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="bg-[#161616] border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Schedule Maintenance</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Schedule a new maintenance service
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-300">Vehicle ID</Label>
+              <Input
+                value={formData.vehicleId}
+                onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                placeholder="Enter vehicle ID"
+                className="bg-[#0F0F0F] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-300">Service Type</Label>
+              <Input
+                value={formData.serviceType}
+                onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                placeholder="e.g., Oil Change, Brake Service"
+                className="bg-[#0F0F0F] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-300">Scheduled Date</Label>
+              <Input
+                type="date"
+                value={formData.scheduledDate}
+                onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
+                className="bg-[#0F0F0F] border-gray-700 text-white"
+              />
+            </div>
+            <Button
+              onClick={handleAddMaintenance}
+              className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
+            >
+              Schedule Service
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <AlertDialogContent className="bg-[#161616] border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Maintenance Item</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to delete this {selectedItem?.service_type} service? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-4">
+            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

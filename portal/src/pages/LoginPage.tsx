@@ -27,13 +27,33 @@ export function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    try {
+      const { error } = await signIn(email, password);
 
-    if (error) {
-      setError(error.message || 'Failed to sign in. Please check your credentials.');
+      if (error) {
+        // Parse Supabase error messages
+        let errorMessage = 'Failed to sign in. Please check your credentials.';
+
+        if (error.message) {
+          if (error.message.includes('Invalid login credentials')) {
+            errorMessage = 'Invalid email or password.';
+          } else if (error.message.includes('Email not confirmed')) {
+            errorMessage = 'Please confirm your email address.';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
+        setError(errorMessage);
+        setLoading(false);
+      } else {
+        // Success - navigate happens automatically via auth state change
+        navigate('/');
+      }
+    } catch (err) {
+      console.error('Sign in error:', err);
+      setError('An unexpected error occurred. Please try again.');
       setLoading(false);
-    } else {
-      navigate('/');
     }
   };
 
