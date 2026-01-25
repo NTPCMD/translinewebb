@@ -13,31 +13,34 @@ import { LogsPage } from '@/pages/LogsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
-export const router = createBrowserRouter([
-  {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    path: '/',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <DashboardPage /> },
-      { path: 'drivers', element: <DriversPage /> },
-      { path: 'vehicles', element: <VehiclesPage /> },
-      { path: 'live-map', element: <LiveMapPage /> },
-      { path: 'shifts', element: <ShiftsPage /> },
-      { path: 'maintenance', element: <MaintenancePage /> },
-      { path: 'logs', element: <LogsPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-    ],
-  },
-  {
-    path: '*',
-    element: <NotFoundPage />,
-  },
-]);
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/login',
+      element: <LoginPage />,
+    },
+    {
+      path: '/',
+      element: (
+        <ProtectedRoute>
+          <DashboardLayout />
+        </ProtectedRoute>
+      ),
+      children: [
+        { index: true, element: <DashboardPage /> },
+        { path: 'drivers', element: <DriversPage /> },
+        { path: 'vehicles', element: <VehiclesPage /> },
+        { path: 'live-map', element: <LiveMapPage /> },
+        { path: 'shifts', element: <ShiftsPage /> },
+        { path: 'maintenance', element: <MaintenancePage /> },
+        { path: 'logs', element: <LogsPage /> },
+        { path: 'settings', element: <SettingsPage /> },
+      ],
+    },
+    {
+      path: '*',
+      element: <NotFoundPage />,
+    },
+  ],
+  { basename: '/portal' }
+);
