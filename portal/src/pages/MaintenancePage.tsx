@@ -64,9 +64,9 @@ export function MaintenancePage() {
 
     try {
       const newItem = await createMaintenanceItem({
-        vehicleId: formData.vehicleId,
-        serviceType: formData.serviceType,
-        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : undefined,
+        vehicle_id: formData.vehicleId,
+        service_type: formData.serviceType,
+        service_date: formData.scheduledDate ? new Date(formData.scheduledDate).toISOString() : undefined,
         status: 'pending',
       });
       setMaintenanceItems([...maintenanceItems, newItem]);

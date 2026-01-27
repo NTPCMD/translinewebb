@@ -43,7 +43,7 @@ export function LiveMapPage() {
     fetchData();
 
     // Subscribe to Realtime location updates
-    const unsubscribe = subscribeToLocationUpdates((newLocation) => {
+    const channel = subscribeToLocationUpdates((newLocation) => {
       setLocations((prev) => {
         // Replace or add the location
         const filtered = prev.filter((l) => l.driver_id !== newLocation.driver_id);
@@ -54,7 +54,11 @@ export function LiveMapPage() {
 
     // Cleanup subscription on unmount
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (channel) {
+        import('@/lib/supabase').then(({ supabase }) => {
+          supabase.removeChannel(channel);
+        });
+      }
     };
   }, []);
 

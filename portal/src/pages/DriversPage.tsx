@@ -10,6 +10,7 @@ import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, UserPlus, Trash2, Loader, Eye, MessageSquare, Ban, MapPin } from 'lucide-react';
 import { listDrivers, createDriver, deleteDriver, Driver, countTotalDrivers, countActiveDrivers } from '@/lib/db/drivers';
+import { listVehicles, updateVehicle, Vehicle } from '@/lib/db/vehicles';
 
 export function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,31 +25,37 @@ export function DriversPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     phone: '',
   });
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [editVehicleDialog, setEditVehicleDialog] = useState(false);
+  const [editDriver, setEditDriver] = useState<Driver | null>(null);
+  const [editVehicleId, setEditVehicleId] = useState('');
 
   // Fetch drivers on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [driversList, total, active] = await Promise.all([
+        const [driversList, total, active, vehiclesList] = await Promise.all([
           listDrivers(),
           countTotalDrivers(),
           countActiveDrivers(),
+          listVehicles(),
         ]);
         setDrivers(driversList);
         setTotalCount(total);
         setActiveCount(active);
+        setVehicles(vehiclesList);
         setError(null);
       } catch (err) {
-        setError('Failed to load drivers');
+        setError('Failed to load drivers or vehicles');
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -60,21 +67,39 @@ export function DriversPage() {
   );
 
   const handleAddDriver = async () => {
-    if (!formData.name || !formData.email || !formData.phone) {
-      setError('All fields are required');
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('Name, email, and password are required');
       return;
     }
-
+    // Check for duplicate email
+    if (drivers.some((d) => d.email.toLowerCase() === formData.email.toLowerCase())) {
+      setError('A driver with this email already exists');
+      return;
+    }
     try {
+      // Register driver in Supabase Auth
+      const { error: signUpError } = await import('@/lib/supabase').then(({ supabase }) =>
+        supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: { data: { name: formData.name } },
+        })
+      );
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      // Create driver in DB
       const newDriver = await createDriver({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        status: 'active',
       });
       setDrivers([...drivers, newDriver]);
       setTotalCount(totalCount + 1);
       setDialogOpen(false);
-      setFormData({ name: '', email: '', phone: '' });
+      setFormData({ name: '', email: '', password: '', phone: '' });
       setError(null);
     } catch (err) {
       setError('Failed to create driver');
@@ -187,6 +212,7 @@ export function DriversPage() {
                     <TableHead className="text-gray-400">Driver Name</TableHead>
                     <TableHead className="text-gray-400">Email</TableHead>
                     <TableHead className="text-gray-400">Phone</TableHead>
+                    <TableHead className="text-gray-400">Vehicle</TableHead>
                     <TableHead className="text-gray-400 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -203,8 +229,27 @@ export function DriversPage() {
                         <TableCell className="font-medium text-white">{driver.name}</TableCell>
                         <TableCell className="text-gray-300">{driver.email}</TableCell>
                         <TableCell className="text-gray-300">{driver.phone}</TableCell>
+                        <TableCell className="text-gray-300">
+                          {(() => {
+                            const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.id);
+                            return vehicle ? vehicle.plate_number : <span className="text-gray-500">Unassigned</span>;
+                          })()}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
+                              onClick={() => {
+                                setEditDriver(driver);
+                                const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.id);
+                                setEditVehicleId(vehicle ? vehicle.id : '');
+                                setEditVehicleDialog(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -218,6 +263,60 @@ export function DriversPage() {
                       </TableRow>
                     ))
                   )}
+                      {/* Edit Vehicle Assignment Dialog */}
+                      <Dialog open={editVehicleDialog} onOpenChange={setEditVehicleDialog}>
+                        <DialogContent className="bg-[#161616] border-gray-800">
+                          <DialogHeader>
+                            <DialogTitle className="text-white">Change Assigned Vehicle</DialogTitle>
+                            <DialogDescription className="text-gray-400">
+                              Assign a different vehicle to this driver
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-gray-300">Vehicle</Label>
+                              <select
+                                value={editVehicleId}
+                                onChange={(e) => setEditVehicleId(e.target.value)}
+                                className="w-full bg-[#0F0F0F] border border-gray-700 text-white p-2 rounded"
+                              >
+                                <option value="">-- None --</option>
+                                {vehicles.map((vehicle) => (
+                                  <option key={vehicle.id} value={vehicle.id}>
+                                    {vehicle.plate_number} ({vehicle.make} {vehicle.model})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <Button
+                              onClick={async () => {
+                                if (!editDriver) return;
+                                try {
+                                  // Unassign this driver from all vehicles
+                                  await Promise.all(
+                                    vehicles
+                                      .filter((v) => v.assigned_driver_id === editDriver.id)
+                                      .map((v) => updateVehicle(v.id, { assigned_driver_id: null }))
+                                  );
+                                  // Assign to selected vehicle
+                                  if (editVehicleId) {
+                                    await updateVehicle(editVehicleId, { assigned_driver_id: editDriver.id });
+                                  }
+                                  // Refresh vehicles state
+                                  const updatedVehicles = await listVehicles();
+                                  setVehicles(updatedVehicles);
+                                  setEditVehicleDialog(false);
+                                } catch (err) {
+                                  setError('Failed to update vehicle assignment');
+                                }
+                              }}
+                              className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                 </TableBody>
               </Table>
             </div>
@@ -255,7 +354,17 @@ export function DriversPage() {
               />
             </div>
             <div>
-              <Label className="text-gray-300">Phone</Label>
+              <Label className="text-gray-300">Password</Label>
+              <Input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Password"
+                className="bg-[#0F0F0F] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-300">Phone (optional)</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}

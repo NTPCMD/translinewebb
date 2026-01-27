@@ -10,7 +10,8 @@ import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, Plus, Eye, Wrench, Calendar, Trash2, Loader } from 'lucide-react';
 import { format } from 'date-fns';
-import { listVehicles, createVehicle, deleteVehicle, Vehicle, countTotalVehicles, countActiveVehicles, countVehiclesInMaintenance } from '@/lib/db/vehicles';
+import { listVehicles, createVehicle, deleteVehicle, updateVehicle, Vehicle, countTotalVehicles, countActiveVehicles, countVehiclesInMaintenance } from '@/lib/db/vehicles';
+import { listDrivers, Driver } from '@/lib/db/drivers';
 
 export function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,41 +29,63 @@ export function VehiclesPage() {
     make: '',
     model: '',
     status: 'active',
+    assignedDriverId: '',
   });
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [editDriverDialog, setEditDriverDialog] = useState(false);
+  const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
+  const [editDriverId, setEditDriverId] = useState('');
 
   // Fetch vehicles on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [vehiclesList, total, active, maintenance] = await Promise.all([
+        const [vehiclesList, total, active, maintenance, driversList] = await Promise.all([
           listVehicles(),
           countTotalVehicles(),
           countActiveVehicles(),
           countVehiclesInMaintenance(),
+          listDrivers(),
         ]);
-        setVehicles(vehiclesList);
+        // Map backend snake_case to camelCase for frontend
+        const mappedVehicles = vehiclesList.map((v) => ({
+          id: v.id,
+          plateNumber: v.plate_number,
+          make: v.make,
+          model: v.model,
+          assignedDriverId: v.assigned_driver_id,
+          status: v.status,
+          lastInspectionDate: v.last_inspection_date,
+          createdAt: v.created_at,
+          updatedAt: v.updated_at,
+        }));
+        setVehicles(mappedVehicles);
         setTotalCount(total);
         setActiveCount(active);
         setMaintenanceCount(maintenance);
+        setDrivers(driversList);
         setError(null);
       } catch (err) {
-        setError('Failed to load vehicles');
+        setError('Failed to load vehicles or drivers');
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
-  const filteredVehicles = vehicles.filter(
-    (vehicle) =>
-      vehicle.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const plate = vehicle.plateNumber || '';
+    const make = vehicle.make || '';
+    const model = vehicle.model || '';
+    return (
+      plate.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      model.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   const handleAddVehicle = async () => {
     if (!formData.plateNumber || !formData.make || !formData.model) {
@@ -71,12 +94,25 @@ export function VehiclesPage() {
     }
 
     try {
-      const newVehicle = await createVehicle({
-        plateNumber: formData.plateNumber,
+      const newVehicleRaw = await createVehicle({
+        plate_number: formData.plateNumber,
         make: formData.make,
         model: formData.model,
         status: formData.status as 'active' | 'maintenance' | 'inactive',
+        assigned_driver_id: formData.assignedDriverId || null,
       });
+      // Map backend to frontend
+      const newVehicle = {
+        id: newVehicleRaw.id,
+        plateNumber: newVehicleRaw.plate_number,
+        make: newVehicleRaw.make,
+        model: newVehicleRaw.model,
+        assignedDriverId: newVehicleRaw.assigned_driver_id,
+        status: newVehicleRaw.status,
+        lastInspectionDate: newVehicleRaw.last_inspection_date,
+        createdAt: newVehicleRaw.created_at,
+        updatedAt: newVehicleRaw.updated_at,
+      };
       setVehicles([...vehicles, newVehicle]);
       setTotalCount(totalCount + 1);
       if (formData.status === 'active') setActiveCount(activeCount + 1);
@@ -214,8 +250,9 @@ export function VehiclesPage() {
                   <TableRow className="border-gray-800 hover:bg-transparent">
                     <TableHead className="text-gray-400">Plate Number</TableHead>
                     <TableHead className="text-gray-400">Make / Model</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                        <TableHead className="text-gray-400">Driver</TableHead>
+                        <TableHead className="text-gray-400">Status</TableHead>
+                        <TableHead className="text-gray-400 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -232,6 +269,12 @@ export function VehiclesPage() {
                         <TableCell className="text-gray-300">
                           {vehicle.make} {vehicle.model}
                         </TableCell>
+                        <TableCell className="text-gray-300">
+                          {(() => {
+                            const driver = drivers.find((d) => d.id === vehicle.assignedDriverId);
+                            return driver ? `${driver.name} (${driver.email})` : <span className="text-gray-500">Unassigned</span>;
+                          })()}
+                        </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(vehicle.status)}>
                             {vehicle.status}
@@ -239,6 +282,18 @@ export function VehiclesPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
+                              onClick={() => {
+                                setEditVehicle(vehicle);
+                                setEditDriverId(vehicle.assignedDriverId || '');
+                                setEditDriverDialog(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -252,6 +307,55 @@ export function VehiclesPage() {
                       </TableRow>
                     ))
                   )}
+                      {/* Edit Driver Assignment Dialog */}
+                      <Dialog open={editDriverDialog} onOpenChange={setEditDriverDialog}>
+                        <DialogContent className="bg-[#161616] border-gray-800">
+                          <DialogHeader>
+                            <DialogTitle className="text-white">Change Assigned Driver</DialogTitle>
+                            <DialogDescription className="text-gray-400">
+                              Assign a different driver to this vehicle
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-gray-300">Driver</Label>
+                              <select
+                                value={editDriverId}
+                                onChange={(e) => setEditDriverId(e.target.value)}
+                                className="w-full bg-[#0F0F0F] border border-gray-700 text-white p-2 rounded"
+                              >
+                                <option value="">-- None --</option>
+                                {drivers.map((driver) => (
+                                  <option key={driver.id} value={driver.id}>
+                                    {driver.name} ({driver.email})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <Button
+                              onClick={async () => {
+                                if (!editVehicle) return;
+                                try {
+                                  const updated = await updateVehicle(editVehicle.id, { assigned_driver_id: editDriverId || null });
+                                  setVehicles((prev) =>
+                                    prev.map((v) =>
+                                      v.id === editVehicle.id
+                                        ? { ...v, assignedDriverId: updated.assigned_driver_id }
+                                        : v
+                                    )
+                                  );
+                                  setEditDriverDialog(false);
+                                } catch (err) {
+                                  setError('Failed to update driver assignment');
+                                }
+                              }}
+                              className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                 </TableBody>
               </Table>
             </div>
@@ -295,6 +399,21 @@ export function VehiclesPage() {
                 placeholder="Transit"
                 className="bg-[#0F0F0F] border-gray-700 text-white"
               />
+            </div>
+            <div>
+              <Label className="text-gray-300">Assign Driver</Label>
+              <select
+                value={formData.assignedDriverId}
+                onChange={(e) => setFormData({ ...formData, assignedDriverId: e.target.value })}
+                className="w-full bg-[#0F0F0F] border border-gray-700 text-white p-2 rounded"
+              >
+                <option value="">-- None --</option>
+                {drivers.map((driver) => (
+                  <option key={driver.id} value={driver.id}>
+                    {driver.name} ({driver.email})
+                  </option>
+                ))}
+              </select>
             </div>
             <Button
               onClick={handleAddVehicle}

@@ -8,67 +8,53 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Eye, AlertCircle, Wrench, AlertTriangle, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Mock data - replace with Supabase query: supabase.from("driver_logs").select("*")
-const mockLogs = [
-  {
-    id: '1',
-    driverName: 'John Smith',
-    vehiclePlate: 'VAN-001',
-    logType: 'incident',
-    description: 'Minor scrape on left side mirror while parking',
-    createdAt: '2026-01-23T10:30:00',
-    severity: 'low',
-  },
-  {
-    id: '2',
-    driverName: 'Sarah Johnson',
-    vehiclePlate: 'TRK-045',
-    logType: 'maintenance_issue',
-    description: 'Strange noise from engine when accelerating',
-    createdAt: '2026-01-23T08:15:00',
-    severity: 'medium',
-  },
-  {
-    id: '3',
-    driverName: 'Michael Brown',
-    vehiclePlate: 'VAN-012',
-    logType: 'general',
-    description: 'Completed delivery route without issues',
-    createdAt: '2026-01-22T17:00:00',
-    severity: 'low',
-  },
-  {
-    id: '4',
-    driverName: 'Emma Wilson',
-    vehiclePlate: 'TRK-089',
-    logType: 'accident',
-    description: 'Minor collision with parked vehicle - police report filed',
-    createdAt: '2026-01-22T14:30:00',
-    severity: 'high',
-  },
-  {
-    id: '5',
-    driverName: 'James Davis',
-    vehiclePlate: 'VAN-023',
-    logType: 'maintenance_issue',
-    description: 'Brake pedal feels soft, needs inspection',
-    createdAt: '2026-01-22T09:00:00',
-    severity: 'high',
-  },
-];
+
+import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
+export interface DriverLog {
+  id: string;
+  driver_name: string;
+  vehicle_plate: string;
+  log_type: string;
+  description: string;
+  created_at: string;
+  severity: string;
+}
 
 export function LogsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'incident' | 'maintenance_issue' | 'accident' | 'general'>('all');
-  const [logs] = useState(mockLogs);
+  const [logs, setLogs] = useState<DriverLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('driver_logs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setLogs(data || []);
+      } catch (err) {
+        setError('Failed to load logs');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
 
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
-      log.driverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.vehiclePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.description.toLowerCase().includes(searchQuery.toLowerCase());
+      log.driver_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.vehicle_plate?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesType = filterType === 'all' || log.logType === filterType;
+    const matchesType = filterType === 'all' || log.log_type === filterType;
 
     return matchesSearch && matchesType;
   });
@@ -249,22 +235,22 @@ export function LogsPage() {
               </TableHeader>
               <TableBody>
                 {filteredLogs.map((log) => {
-                  const Icon = getLogIcon(log.logType);
+                  const Icon = getLogIcon(log.log_type);
                   return (
                     <TableRow key={log.id} className="border-gray-800">
                       <TableCell>
-                        <Badge className={getLogTypeBadge(log.logType)}>
+                        <Badge className={getLogTypeBadge(log.log_type)}>
                           <Icon className="w-3 h-3 mr-1" />
-                          {log.logType.replace('_', ' ')}
+                          {log.log_type?.replace('_', ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-white">{log.driverName}</TableCell>
-                      <TableCell className="text-gray-300">{log.vehiclePlate}</TableCell>
+                      <TableCell className="font-medium text-white">{log.driver_name}</TableCell>
+                      <TableCell className="text-gray-300">{log.vehicle_plate}</TableCell>
                       <TableCell className="text-gray-300 max-w-xs truncate">
                         {log.description}
                       </TableCell>
                       <TableCell className="text-gray-300">
-                        {format(new Date(log.createdAt), 'MMM dd, HH:mm')}
+                        {format(new Date(log.created_at), 'MMM dd, HH:mm')}
                       </TableCell>
                       <TableCell>
                         <Badge className={getSeverityBadge(log.severity)}>
