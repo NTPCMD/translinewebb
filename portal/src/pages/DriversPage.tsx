@@ -300,6 +300,7 @@ export function DriversPage() {
                                   );
                                   // Assign to selected vehicle
                                   if (editVehicleId) {
+                                    console.log("Assigning vehicle id:", editVehicleId, "to driver id:", editDriver.id);
                                     await updateVehicle(editVehicleId, { assigned_driver_id: editDriver.id });
                                   }
                                   // Refresh vehicles state

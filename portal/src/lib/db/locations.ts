@@ -38,20 +38,24 @@ export async function getLatestLocationByDriver(driverId: string): Promise<Locat
   return data || null;
 }
 
-export async function listLatestLocationsByDrivers(driverIds: string[]): Promise<LocationLog[]> {
-  if (driverIds.length === 0) return [];
+export async function listLatestLocationsByDrivers(driverIds?: string[]): Promise<LocationLog[]> {
+  const ids = Array.isArray(driverIds) ? driverIds : [];
+  if (ids.length === 0) return [];
 
   const { data, error } = await supabase
     .from('location_logs')
     .select('*')
-    .in('driver_id', driverIds)
+    .in('driver_id', ids)
     .order('timestamp', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('listLatestLocationsByDrivers error:', error);
+    return [];
+  }
 
   // Filter to get latest per driver
   const latestMap = new Map<string, LocationLog>();
-  (data || []).forEach((log) => {
+  (data ?? []).forEach((log) => {
     if (!latestMap.has(log.driver_id)) {
       latestMap.set(log.driver_id, log);
     }

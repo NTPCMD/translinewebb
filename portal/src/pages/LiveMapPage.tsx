@@ -28,8 +28,10 @@ export function LiveMapPage() {
           listDrivers(),
           listLatestLocationsByDrivers(),
         ]);
-        setDrivers(driversList);
-        setLocations(locationsList);
+        const safeDrivers = driversList ?? [];
+        const safeLocations = locationsList ?? [];
+        setDrivers(safeDrivers);
+        setLocations(safeLocations);
         setLastUpdate(new Date());
         setError(null);
       } catch (err) {
@@ -45,8 +47,9 @@ export function LiveMapPage() {
     // Subscribe to Realtime location updates
     const channel = subscribeToLocationUpdates((newLocation) => {
       setLocations((prev) => {
+        const safePrev = prev ?? [];
         // Replace or add the location
-        const filtered = prev.filter((l) => l.driver_id !== newLocation.driver_id);
+        const filtered = safePrev.filter((l) => l.driver_id !== newLocation.driver_id);
         return [newLocation, ...filtered];
       });
       setLastUpdate(new Date());

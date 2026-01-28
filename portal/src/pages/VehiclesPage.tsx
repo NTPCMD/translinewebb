@@ -11,7 +11,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Search, Plus, Eye, Wrench, Calendar, Trash2, Loader } from 'lucide-react';
 import { format } from 'date-fns';
 import { listVehicles, createVehicle, deleteVehicle, updateVehicle, Vehicle, countTotalVehicles, countActiveVehicles, countVehiclesInMaintenance } from '@/lib/db/vehicles';
-import { listDrivers, Driver } from '@/lib/db/drivers';
+// import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+// ...existing imports...
 
 export function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +33,7 @@ export function VehiclesPage() {
     status: 'active',
     assignedDriverId: '',
   });
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [editDriverDialog, setEditDriverDialog] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [editDriverId, setEditDriverId] = useState('');
@@ -41,13 +43,17 @@ export function VehiclesPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [vehiclesList, total, active, maintenance, driversList] = await Promise.all([
+        const [vehiclesList, total, active, maintenance] = await Promise.all([
           listVehicles(),
           countTotalVehicles(),
           countActiveVehicles(),
           countVehiclesInMaintenance(),
-          listDrivers(),
         ]);
+        // Fetch drivers from profiles table only
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email');
+        if (profilesError) throw profilesError;
         // Map backend snake_case to camelCase for frontend
         const mappedVehicles = vehiclesList.map((v) => ({
           id: v.id,
@@ -64,7 +70,7 @@ export function VehiclesPage() {
         setTotalCount(total);
         setActiveCount(active);
         setMaintenanceCount(maintenance);
-        setDrivers(driversList);
+        setDrivers(profiles ?? []);
         setError(null);
       } catch (err) {
         setError('Failed to load vehicles or drivers');
@@ -94,13 +100,21 @@ export function VehiclesPage() {
     }
 
     try {
-      const newVehicleRaw = await createVehicle({
+      // Never assign a driver during vehicle creation
+      const payload: any = {
         plate_number: formData.plateNumber,
         make: formData.make,
         model: formData.model,
         status: formData.status as 'active' | 'maintenance' | 'inactive',
-        assigned_driver_id: formData.assignedDriverId || null,
-      });
+        assignment_active: false,
+        assigned_driver_id: null,
+        assigned_at: null,
+      };
+      // HARD STOP: never assign driver on create
+      delete payload.assigned_driver_id;
+      delete payload.assigned_at;
+      payload.assignment_active = false;
+      const newVehicleRaw = await createVehicle(payload);
       // Map backend to frontend
       const newVehicle = {
         id: newVehicleRaw.id,
@@ -272,7 +286,8 @@ export function VehiclesPage() {
                         <TableCell className="text-gray-300">
                           {(() => {
                             const driver = drivers.find((d) => d.id === vehicle.assignedDriverId);
-                            return driver ? `${driver.name} (${driver.email})` : <span className="text-gray-500">Unassigned</span>;
+                            const label = driver ? (driver.full_name ?? driver.email ?? driver.id) : null;
+                            return driver ? label : <span className="text-gray-500">Unassigned</span>;
                           })()}
                         </TableCell>
                         <TableCell>
@@ -327,7 +342,7 @@ export function VehiclesPage() {
                                 <option value="">-- None --</option>
                                 {drivers.map((driver) => (
                                   <option key={driver.id} value={driver.id}>
-                                    {driver.name} ({driver.email})
+                                    {driver.full_name ?? driver.email ?? driver.id}
                                   </option>
                                 ))}
                               </select>
@@ -336,6 +351,21 @@ export function VehiclesPage() {
                               onClick={async () => {
                                 if (!editVehicle) return;
                                 try {
+                                  // Check driver exists in profiles before assigning
+                                  if (editDriverId) {
+                                    const { data, error: profileError } = await import('@/lib/supabase').then(({ supabase }) =>
+                                      supabase.from('profiles').select('id').eq('id', editDriverId).single()
+                                    );
+                                    if (profileError?.code === 'PGRST116' || !data) {
+                                      setError('Selected driver does not exist in profiles.');
+                                      return;
+                                    }
+                                    if (profileError) {
+                                      setError('Error checking driver existence.');
+                                      return;
+                                    }
+                                  }
+                                  console.log("Assigning driver profile id:", editDriverId);
                                   const updated = await updateVehicle(editVehicle.id, { assigned_driver_id: editDriverId || null });
                                   setVehicles((prev) =>
                                     prev.map((v) =>
@@ -410,7 +440,7 @@ export function VehiclesPage() {
                 <option value="">-- None --</option>
                 {drivers.map((driver) => (
                   <option key={driver.id} value={driver.id}>
-                    {driver.name} ({driver.email})
+                    {driver.full_name ?? driver.email ?? driver.id}
                   </option>
                 ))}
               </select>
