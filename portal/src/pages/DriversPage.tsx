@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, UserPlus, Trash2, Loader, Eye, MessageSquare, Ban, MapPin } from 'lucide-react';
-import { listDrivers, createDriver, deleteDriver, Driver, countTotalDrivers, countActiveDrivers } from '@/lib/db/drivers';
+import { deleteDriver } from '@/lib/db/drivers';
 import { listVehicles, updateVehicle, Vehicle } from '@/lib/db/vehicles';
+import { supabase } from '@/lib/supabase';
 
 export function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]); // profiles
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,20 +34,19 @@ export function DriversPage() {
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [editVehicleId, setEditVehicleId] = useState('');
 
-  // Fetch drivers on mount
+  // Fetch drivers (from profiles) and vehicles on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [driversList, total, active, vehiclesList] = await Promise.all([
-          listDrivers(),
-          countTotalDrivers(),
-          countActiveDrivers(),
+        const [vehiclesList, profilesRes] = await Promise.all([
           listVehicles(),
+          supabase.from('profiles').select('id, email, full_name, phone, status, created_at'),
         ]);
-        setDrivers(driversList);
-        setTotalCount(total);
-        setActiveCount(active);
+        if (profilesRes.error) throw profilesRes.error;
+        setDrivers(profilesRes.data ?? []);
+        setTotalCount(profilesRes.data?.length ?? 0);
+        setActiveCount((profilesRes.data ?? []).filter((d: any) => d.status === 'active').length);
         setVehicles(vehiclesList);
         setError(null);
       } catch (err) {
@@ -61,43 +61,40 @@ export function DriversPage() {
 
   const filteredDrivers = drivers.filter(
     (driver) =>
-      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      driver.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      driver.phone.includes(searchQuery)
+      (driver.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        driver.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        driver.phone?.includes(searchQuery))
   );
 
+  // Add driver via Supabase Auth (creates profile automatically)
   const handleAddDriver = async () => {
     if (!formData.name || !formData.email || !formData.password) {
       setError('Name, email, and password are required');
       return;
     }
     // Check for duplicate email
-    if (drivers.some((d) => d.email.toLowerCase() === formData.email.toLowerCase())) {
+    if (drivers.some((d) => d.email?.toLowerCase() === formData.email.toLowerCase())) {
       setError('A driver with this email already exists');
       return;
     }
     try {
-      // Register driver in Supabase Auth
-      const { error: signUpError } = await import('@/lib/supabase').then(({ supabase }) =>
-        supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: { data: { name: formData.name } },
-        })
-      );
+      // Register driver in Supabase Auth (creates profile)
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: { data: { full_name: formData.name, phone: formData.phone, status: 'active' } },
+      });
       if (signUpError) {
         setError(signUpError.message);
         return;
       }
-      // Create driver in DB
-      const newDriver = await createDriver({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        status: 'active',
-      });
-      setDrivers([...drivers, newDriver]);
-      setTotalCount(totalCount + 1);
+      // Refetch drivers
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, phone, status, created_at');
+      if (profilesError) throw profilesError;
+      setDrivers(profiles ?? []);
+      setTotalCount((profiles ?? []).length);
       setDialogOpen(false);
       setFormData({ name: '', email: '', password: '', phone: '' });
       setError(null);
@@ -114,11 +111,14 @@ export function DriversPage() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedDriver) return;
-
     try {
-      await deleteDriver(selectedDriver.id);
-      setDrivers(drivers.filter((d) => d.id !== selectedDriver.id));
-      setTotalCount(Math.max(0, totalCount - 1));
+      // Remove from profiles (soft delete by setting status to 'inactive')
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ status: 'inactive' })
+        .eq('id', selectedDriver.id);
+      if (updateError) throw updateError;
+      setDrivers(drivers.map((d) => d.id === selectedDriver.id ? { ...d, status: 'inactive' } : d));
       setActiveCount(Math.max(0, activeCount - 1));
       setDeleteDialog(false);
       setSelectedDriver(null);
@@ -224,9 +224,9 @@ export function DriversPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredDrivers.map((driver) => (
+                    {filteredDrivers.map((driver) => (
                       <TableRow key={driver.id} className="border-gray-800">
-                        <TableCell className="font-medium text-white">{driver.name}</TableCell>
+                        <TableCell className="font-medium text-white">{driver.full_name ?? driver.email ?? driver.id}</TableCell>
                         <TableCell className="text-gray-300">{driver.email}</TableCell>
                         <TableCell className="text-gray-300">{driver.phone}</TableCell>
                         <TableCell className="text-gray-300">
@@ -261,7 +261,7 @@ export function DriversPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                    ))}
                   )}
                       {/* Edit Vehicle Assignment Dialog */}
                       <Dialog open={editVehicleDialog} onOpenChange={setEditVehicleDialog}>
