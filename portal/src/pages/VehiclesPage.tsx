@@ -38,6 +38,12 @@ export function VehiclesPage() {
   const [editDriverDialog, setEditDriverDialog] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [editDriverId, setEditDriverId] = useState('');
+  const findDriverForVehicle = (vehicle: Vehicle) =>
+    drivers.find(
+      (driver) =>
+        driver.driver_id === vehicle.assignedDriverId ||
+        driver.auth_user_id === vehicle.assignedDriverId
+    );
 
   // Fetch vehicles on mount
   useEffect(() => {
@@ -286,7 +292,7 @@ export function VehiclesPage() {
                         </TableCell>
                         <TableCell className="text-gray-300">
                           {(() => {
-                            const driver = drivers.find((d) => d.driver_id === vehicle.assignedDriverId);
+                            const driver = findDriverForVehicle(vehicle);
                             const label = driver ? (driver.full_name ?? driver.profile_email ?? driver.email) : null;
                             return driver ? label : <span className="text-gray-500">Unassigned</span>;
                           })()}
@@ -304,7 +310,8 @@ export function VehiclesPage() {
                               className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                               onClick={() => {
                                 setEditVehicle(vehicle);
-                                setEditDriverId(vehicle.assignedDriverId || '');
+                                const driver = findDriverForVehicle(vehicle);
+                                setEditDriverId(driver?.driver_id || '');
                                 setEditDriverDialog(true);
                               }}
                             >
