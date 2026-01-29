@@ -10,8 +10,9 @@ import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, UserPlus, Trash2, Loader, Eye, MessageSquare, Ban, MapPin } from 'lucide-react';
 import { deleteDriver } from '@/lib/db/drivers';
-import { listVehicles, updateVehicle, Vehicle } from '@/lib/db/vehicles';
+import { listVehicles, updateVehicle, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
+import { fetchDriversFull, isDriverRow } from '@/lib/drivers';
 
 export function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,14 +40,16 @@ export function DriversPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [vehiclesList, profilesRes] = await Promise.all([
+        const [vehiclesList, driversFull] = await Promise.all([
           listVehicles(),
-          supabase.from('profiles').select('id, email, full_name, phone, status, created_at'),
+          fetchDriversFull(),
         ]);
-        if (profilesRes.error) throw profilesRes.error;
-        setDrivers(profilesRes.data ?? []);
-        setTotalCount(profilesRes.data?.length ?? 0);
-        setActiveCount((profilesRes.data ?? []).filter((d: any) => d.status === 'active').length);
+        // Filter to only drivers, using a robust helper that falls back if `role` is missing
+        const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
+        setDrivers(onlyDrivers);
+        console.log('DriversPage: loaded drivers count=', onlyDrivers.length);
+        setTotalCount(onlyDrivers.length ?? 0);
+        setActiveCount(onlyDrivers.filter((d: any) => d.status === 'active').length);
         setVehicles(vehiclesList);
         setError(null);
       } catch (err) {
@@ -88,13 +91,11 @@ export function DriversPage() {
         setError(signUpError.message);
         return;
       }
-      // Refetch drivers
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, phone, status, created_at');
-      if (profilesError) throw profilesError;
-      setDrivers(profiles ?? []);
-      setTotalCount((profiles ?? []).length);
+      // Refetch drivers list from drivers_full
+      const driversFull = await fetchDriversFull();
+      const onlyDrivers = (driversFull ?? []).filter((d: any) => d.role === 'driver');
+      setDrivers(onlyDrivers);
+      setTotalCount(onlyDrivers.length);
       setDialogOpen(false);
       setFormData({ name: '', email: '', password: '', phone: '' });
       setError(null);
@@ -112,13 +113,13 @@ export function DriversPage() {
   const handleDeleteConfirm = async () => {
     if (!selectedDriver) return;
     try {
-      // Remove from profiles (soft delete by setting status to 'inactive')
+      // Soft delete the associated profile by using auth_user_id
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ status: 'inactive' })
-        .eq('id', selectedDriver.id);
+        .eq('id', selectedDriver.auth_user_id);
       if (updateError) throw updateError;
-      setDrivers(drivers.map((d) => d.id === selectedDriver.id ? { ...d, status: 'inactive' } : d));
+      setDrivers(drivers.map((d) => d.driver_id === selectedDriver.driver_id ? { ...d, status: 'inactive' } : d));
       setActiveCount(Math.max(0, activeCount - 1));
       setDeleteDialog(false);
       setSelectedDriver(null);
@@ -224,14 +225,15 @@ export function DriversPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    {filteredDrivers.map((driver) => (
-                      <TableRow key={driver.id} className="border-gray-800">
-                        <TableCell className="font-medium text-white">{driver.full_name ?? driver.email ?? driver.id}</TableCell>
-                        <TableCell className="text-gray-300">{driver.email}</TableCell>
+                    <>
+                      {filteredDrivers.map((driver) => (
+                      <TableRow key={driver.driver_id} className="border-gray-800">
+                        <TableCell className="font-medium text-white">{driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}</TableCell>
+                        <TableCell className="text-gray-300">{driver.profile_email ?? driver.email}</TableCell>
                         <TableCell className="text-gray-300">{driver.phone}</TableCell>
                         <TableCell className="text-gray-300">
                           {(() => {
-                            const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.id);
+                            const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.driver_id);
                             return vehicle ? vehicle.plate_number : <span className="text-gray-500">Unassigned</span>;
                           })()}
                         </TableCell>
@@ -243,7 +245,7 @@ export function DriversPage() {
                               className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                               onClick={() => {
                                 setEditDriver(driver);
-                                const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.id);
+                                const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.driver_id);
                                 setEditVehicleId(vehicle ? vehicle.id : '');
                                 setEditVehicleDialog(true);
                               }}
@@ -261,7 +263,8 @@ export function DriversPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      ))}
+                    </>
                   )}
                       {/* Edit Vehicle Assignment Dialog */}
                       <Dialog open={editVehicleDialog} onOpenChange={setEditVehicleDialog}>
@@ -292,23 +295,25 @@ export function DriversPage() {
                               onClick={async () => {
                                 if (!editDriver) return;
                                 try {
-                                  // Unassign this driver from all vehicles
-                                  await Promise.all(
-                                    vehicles
-                                      .filter((v) => v.assigned_driver_id === editDriver.id)
-                                      .map((v) => updateVehicle(v.id, { assigned_driver_id: null }))
-                                  );
-                                  // Assign to selected vehicle
+                                  // Assign to selected vehicle via RPC to avoid unique constraint conflicts
                                   if (editVehicleId) {
-                                    console.log("Assigning vehicle id:", editVehicleId, "to driver id:", editDriver.id);
-                                    await updateVehicle(editVehicleId, { assigned_driver_id: editDriver.id });
+                                    console.log("Assigning vehicle id:", editVehicleId, "to driver id:", editDriver.driver_id);
+                                    const assigned = await assignDriverToVehicle(editDriver.driver_id, editVehicleId);
+                                    if (!assigned) throw new Error('Assignment RPC returned no data');
                                   }
                                   // Refresh vehicles state
                                   const updatedVehicles = await listVehicles();
                                   setVehicles(updatedVehicles);
                                   setEditVehicleDialog(false);
-                                } catch (err) {
-                                  setError('Failed to update vehicle assignment');
+                                } catch (err: any) {
+                                  console.error('Failed to update vehicle assignment:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+                                  const code = err?.code || err?.status;
+                                  const msg = err?.message || err?.error || JSON.stringify(err);
+                                  if (msg.includes('one_active_vehicle_per_driver') || msg.includes('duplicate key') || code === '23505' || code === 409) {
+                                    setError('Driver already has an active vehicle. Unassign their current vehicle first.');
+                                  } else {
+                                    setError('Failed to update vehicle assignment: ' + (msg || 'unknown error'));
+                                  }
                                 }
                               }}
                               className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
@@ -389,7 +394,7 @@ export function DriversPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Driver</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete {selectedDriver?.name}? This action cannot be undone.
+              Are you sure you want to delete {selectedDriver?.full_name ?? selectedDriver?.profile_email ?? selectedDriver?.driver_id}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">

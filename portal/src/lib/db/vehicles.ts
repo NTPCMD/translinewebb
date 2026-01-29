@@ -57,6 +57,25 @@ export async function updateVehicle(id: string, updates: Partial<Vehicle>): Prom
   return data;
 }
 
+// Atomically unassign any vehicle the driver currently has and assign the driver to the target vehicle.
+export async function assignDriverToVehicle(driverId: string | null, vehicleId: string): Promise<Vehicle | null> {
+  // If driverId is null we simply unassign the vehicle
+  if (!driverId) {
+    const { data, error } = await supabase
+      .from('vehicles')
+      .update({ assigned_driver_id: null })
+      .eq('id', vehicleId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await supabase.rpc('assign_driver_to_vehicle', { p_driver: driverId, p_vehicle: vehicleId });
+  if (error) throw error;
+  return data as Vehicle | null;
+}
+
 export async function deleteVehicle(id: string): Promise<void> {
   const { error } = await supabase
     .from('vehicles')
