@@ -1,5 +1,5 @@
 // Drivers management page
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -8,11 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
-import { Search, UserPlus, Trash2, Loader, Eye, MessageSquare, Ban, MapPin } from 'lucide-react';
+import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
 import { deleteDriver } from '@/lib/db/drivers';
-import { listVehicles, updateVehicle, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
+import { listVehicles, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
 import { fetchDriversFull, isDriverRow } from '@/lib/drivers';
+import { createClient } from '@supabase/supabase-js';
+import { getEnv } from '@/lib/env';
 
 export function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +36,22 @@ export function DriversPage() {
   const [editVehicleDialog, setEditVehicleDialog] = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [editVehicleId, setEditVehicleId] = useState('');
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordDriver, setPasswordDriver] = useState<Driver | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const findVehicleForDriver = (driver: Driver) =>
+    vehicles.find(
+      (vehicle) =>
+        vehicle.assigned_driver_id === driver.driver_id ||
+        vehicle.assigned_driver_id === driver.auth_user_id
+    );
+  const adminClient = useMemo(() => {
+    const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceRoleKey) return null;
+    return createClient(getEnv('VITE_SUPABASE_URL'), serviceRoleKey);
+  }, []);
 
   // Fetch drivers (from profiles) and vehicles on mount
   useEffect(() => {
@@ -127,6 +145,56 @@ export function DriversPage() {
     } catch (err) {
       setError('Failed to delete driver');
       console.error(err);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!passwordDriver) return;
+    if (!newPassword || !confirmPassword) {
+      setError('Please enter and confirm the new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    const authUserId = passwordDriver.auth_user_id;
+    const email = passwordDriver.profile_email ?? passwordDriver.email;
+    if (!authUserId && !email) {
+      setError('Selected driver is missing auth user details.');
+      return;
+    }
+    try {
+      setPasswordSaving(true);
+      if (!adminClient) {
+        if (!email) {
+          setError('Driver email is required to send a reset link.');
+          return;
+        }
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+        if (resetError) throw resetError;
+        setError('Service role key missing. Sent a reset link to the driver instead.');
+        setPasswordDialogOpen(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        return;
+      }
+      if (!authUserId) {
+        setError('Driver auth user id is required to set a password.');
+        return;
+      }
+      const { error: updateError } = await adminClient.auth.admin.updateUserById(authUserId, {
+        password: newPassword,
+      });
+      if (updateError) throw updateError;
+      setPasswordDialogOpen(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message ? `Failed to set password: ${err.message}` : 'Failed to set password.');
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -233,7 +301,7 @@ export function DriversPage() {
                         <TableCell className="text-gray-300">{driver.phone}</TableCell>
                         <TableCell className="text-gray-300">
                           {(() => {
-                            const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.driver_id);
+                            const vehicle = findVehicleForDriver(driver);
                             return vehicle ? vehicle.plate_number : <span className="text-gray-500">Unassigned</span>;
                           })()}
                         </TableCell>
@@ -245,12 +313,25 @@ export function DriversPage() {
                               className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                               onClick={() => {
                                 setEditDriver(driver);
-                                const vehicle = vehicles.find((v) => v.assigned_driver_id === driver.driver_id);
+                                const vehicle = findVehicleForDriver(driver);
                                 setEditVehicleId(vehicle ? vehicle.id : '');
                                 setEditVehicleDialog(true);
                               }}
                             >
                               <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-400 hover:text-[#FF6B35] h-8 w-8 p-0"
+                              onClick={() => {
+                                setPasswordDriver(driver);
+                                setNewPassword('');
+                                setConfirmPassword('');
+                                setPasswordDialogOpen(true);
+                              }}
+                            >
+                              <Key className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -329,6 +410,55 @@ export function DriversPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Set Driver Password Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="bg-[#161616] border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Set Driver Password</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {adminClient
+                ? 'Set a new password for the selected driver.'
+                : 'Set the VITE_SUPABASE_SERVICE_ROLE_KEY to update passwords directly. Otherwise, a reset link will be emailed.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-300">Driver</Label>
+              <div className="text-sm text-gray-200">
+                {passwordDriver?.full_name ?? passwordDriver?.profile_email ?? passwordDriver?.email ?? 'Selected driver'}
+              </div>
+            </div>
+            <div>
+              <Label className="text-gray-300">New Password</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password"
+                className="bg-[#0F0F0F] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-300">Confirm Password</Label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                className="bg-[#0F0F0F] border-gray-700 text-white"
+              />
+            </div>
+            <Button
+              onClick={handlePasswordReset}
+              className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
+              disabled={passwordSaving}
+            >
+              {passwordSaving ? 'Saving...' : adminClient ? 'Set Password' : 'Send Reset Link'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Driver Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
