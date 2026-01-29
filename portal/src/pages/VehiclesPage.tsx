@@ -10,9 +10,10 @@ import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, Plus, Eye, Wrench, Calendar, Trash2, Loader } from 'lucide-react';
 import { format } from 'date-fns';
-import { listVehicles, createVehicle, deleteVehicle, updateVehicle, Vehicle, countTotalVehicles, countActiveVehicles, countVehiclesInMaintenance } from '@/lib/db/vehicles';
+import { listVehicles, createVehicle, deleteVehicle, updateVehicle, assignDriverToVehicle, Vehicle, countTotalVehicles, countActiveVehicles, countVehiclesInMaintenance } from '@/lib/db/vehicles';
 // import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchDriverOptions, isDriverRow } from '@/lib/drivers';
 // ...existing imports...
 
 export function VehiclesPage() {
@@ -49,11 +50,9 @@ export function VehiclesPage() {
           countActiveVehicles(),
           countVehiclesInMaintenance(),
         ]);
-        // Fetch drivers from profiles table only
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email');
-        if (profilesError) throw profilesError;
+        // Fetch drivers from drivers_full (only driver roles)
+        const driversFull = await fetchDriverOptions();
+        const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
         // Map backend snake_case to camelCase for frontend
         const mappedVehicles = vehiclesList.map((v) => ({
           id: v.id,
@@ -67,10 +66,12 @@ export function VehiclesPage() {
           updatedAt: v.updated_at,
         }));
         setVehicles(mappedVehicles);
+        console.log('VehiclesPage: loaded vehicles count=', mappedVehicles.length);
         setTotalCount(total);
         setActiveCount(active);
         setMaintenanceCount(maintenance);
-        setDrivers(profiles ?? []);
+        setDrivers(onlyDrivers);
+        console.log('VehiclesPage: loaded drivers count=', onlyDrivers.length);
         setError(null);
       } catch (err) {
         setError('Failed to load vehicles or drivers');
@@ -285,8 +286,8 @@ export function VehiclesPage() {
                         </TableCell>
                         <TableCell className="text-gray-300">
                           {(() => {
-                            const driver = drivers.find((d) => d.id === vehicle.assignedDriverId);
-                            const label = driver ? (driver.full_name ?? driver.email ?? driver.id) : null;
+                            const driver = drivers.find((d) => d.driver_id === vehicle.assignedDriverId);
+                            const label = driver ? (driver.full_name ?? driver.profile_email ?? driver.email) : null;
                             return driver ? label : <span className="text-gray-500">Unassigned</span>;
                           })()}
                         </TableCell>
@@ -341,8 +342,8 @@ export function VehiclesPage() {
                               >
                                 <option value="">-- None --</option>
                                 {drivers.map((driver) => (
-                                  <option key={driver.id} value={driver.id}>
-                                    {driver.full_name ?? driver.email ?? driver.id}
+                                  <option key={driver.driver_id} value={driver.driver_id}>
+                                    {driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}
                                   </option>
                                 ))}
                               </select>
@@ -351,32 +352,44 @@ export function VehiclesPage() {
                               onClick={async () => {
                                 if (!editVehicle) return;
                                 try {
-                                  // Check driver exists in profiles before assigning
+                                  // Check driver exists in drivers_full before assigning
                                   if (editDriverId) {
-                                    const { data, error: profileError } = await import('@/lib/supabase').then(({ supabase }) =>
-                                      supabase.from('profiles').select('id').eq('id', editDriverId).single()
+                                    const { data, error: driverError } = await import('@/lib/supabase').then(({ supabase }) =>
+                                      supabase.from('drivers_full').select('driver_id').eq('driver_id', editDriverId).single()
                                     );
-                                    if (profileError?.code === 'PGRST116' || !data) {
-                                      setError('Selected driver does not exist in profiles.');
+                                    if (driverError?.code === 'PGRST116' || !data) {
+                                      setError('Selected driver does not exist.');
                                       return;
                                     }
-                                    if (profileError) {
+                                    if (driverError) {
                                       setError('Error checking driver existence.');
                                       return;
                                     }
                                   }
-                                  console.log("Assigning driver profile id:", editDriverId);
-                                  const updated = await updateVehicle(editVehicle.id, { assigned_driver_id: editDriverId || null });
+
+                                  // Use RPC to atomically unassign previous vehicle (if any) and assign this vehicle to the driver.
+                                  console.log("Assigning driver id:", editDriverId);
+                                  const assigned = await assignDriverToVehicle(editDriverId || null, editVehicle.id);
+                                  if (!assigned) {
+                                    throw new Error('Assignment RPC returned no data');
+                                  }
                                   setVehicles((prev) =>
                                     prev.map((v) =>
                                       v.id === editVehicle.id
-                                        ? { ...v, assignedDriverId: updated.assigned_driver_id }
+                                        ? { ...v, assignedDriverId: assigned.assigned_driver_id }
                                         : v
                                     )
                                   );
                                   setEditDriverDialog(false);
-                                } catch (err) {
-                                  setError('Failed to update driver assignment');
+                                } catch (err: any) {
+                                  console.error('Failed to update driver assignment:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+                                  const code = err?.code || err?.status;
+                                  const msg = err?.message || err?.error || JSON.stringify(err);
+                                  if (msg.includes('one_active_vehicle_per_driver') || msg.includes('duplicate key') || code === '23505' || code === 409) {
+                                    setError('Driver already has an active vehicle. Unassign their current vehicle first.');
+                                  } else {
+                                    setError('Failed to update driver assignment: ' + (msg || 'unknown error'));
+                                  }
                                 }
                               }}
                               className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
@@ -439,8 +452,8 @@ export function VehiclesPage() {
               >
                 <option value="">-- None --</option>
                 {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.full_name ?? driver.email ?? driver.id}
+                  <option key={driver.driver_id} value={driver.driver_id}>
+                    {driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}
                   </option>
                 ))}
               </select>
