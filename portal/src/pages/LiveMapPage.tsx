@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -11,32 +11,14 @@ import { listLatestLocationsByDrivers, DriverLocation } from '@/lib/db/locations
 import { listDrivers } from '@/lib/db/drivers';
 import { listVehicles, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
-import { useDriverLocations } from '@/lib/realtime/useDriverLocations';
-import { useDriverPresence } from '@/lib/realtime/useDriverPresence';
-
-type DriverStatusRow = {
-  driver_id: string;
-  last_seen_at: string | null;
-  is_online: boolean | null;
-  status_state: string | null;
-  on_break: boolean | null;
-  status_started_at: string | null;
-  last_location_at: string | null;
-  lat: number | null;
-  lng: number | null;
-  speed_kmh: number | null;
-  heading: number | null;
-  vehicle_id: string | null;
-  shift_id: string | null;
-};
+import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
 
 const DEFAULT_CENTER: [number, number] = [37.7749, -122.4194];
 
 export function LiveMapPage() {
-  const [locations, setLocations] = useState<DriverLocation[]>([]);
+  const { statusMap, setStatusMap, locationMap, setLocationMap } = useDriverLiveState();
   const [drivers, setDrivers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [statusMap, setStatusMap] = useState<Record<string, DriverStatusRow>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,6 +47,8 @@ export function LiveMapPage() {
     vehicles.forEach((vehicle) => map.set(vehicle.id, vehicle));
     return map;
   }, [vehicles]);
+  const isOnline = (status?: DriverLiveStatus | null) =>
+    isOnlineFromLastSeen(status?.last_seen_at) || Boolean(status?.is_online);
 
   const refreshData = async () => {
     try {
@@ -76,12 +60,19 @@ export function LiveMapPage() {
         supabase.from('view_driver_current_status').select('*'),
       ]);
       setDrivers(driversList ?? []);
-      setLocations(locationsList ?? []);
+      const nextLocationMap: Record<string, DriverLocation> = {};
+      (locationsList ?? []).forEach((location) => {
+        nextLocationMap[location.driver_id] = location;
+      });
+      setLocationMap(nextLocationMap);
       setVehicles(vehiclesList ?? []);
-      const statusRows = (statusList.data as DriverStatusRow[]) ?? [];
-      const nextStatusMap: Record<string, DriverStatusRow> = {};
+      const statusRows = (statusList.data as DriverLiveStatus[]) ?? [];
+      const nextStatusMap: Record<string, DriverLiveStatus> = {};
       statusRows.forEach((row) => {
-        nextStatusMap[row.driver_id] = row;
+        nextStatusMap[row.driver_id] = {
+          ...row,
+          is_online: isOnlineFromLastSeen(row.last_seen_at),
+        };
       });
       setStatusMap(nextStatusMap);
       setLastUpdate(new Date());
@@ -98,45 +89,11 @@ export function LiveMapPage() {
     refreshData();
   }, []);
 
-  const handleLocationInsert = useCallback((newLocation: DriverLocation) => {
-    setLocations((prev) => {
-      const filtered = (prev ?? []).filter((loc) => loc.driver_id !== newLocation.driver_id);
-      return [newLocation, ...filtered];
-    });
-    setLastUpdate(new Date());
-  }, []);
-
-  const handlePresenceUpdate = useCallback((presence: { driver_id: string; last_seen_at: string }) => {
-    setStatusMap((prev) => {
-      const existing = prev[presence.driver_id] ?? ({ driver_id: presence.driver_id } as DriverStatusRow);
-      return {
-        ...prev,
-        [presence.driver_id]: {
-          ...existing,
-          last_seen_at: presence.last_seen_at,
-          is_online: new Date(presence.last_seen_at) > new Date(Date.now() - 60 * 1000),
-        },
-      };
-    });
-  }, []);
-
-  const handleStatusUpdate = useCallback((statusEvent: { driver_id: string; state: string; started_at: string }) => {
-    setStatusMap((prev) => {
-      const existing = prev[statusEvent.driver_id] ?? ({ driver_id: statusEvent.driver_id } as DriverStatusRow);
-      return {
-        ...prev,
-        [statusEvent.driver_id]: {
-          ...existing,
-          status_state: statusEvent.state,
-          on_break: statusEvent.state === 'break',
-          status_started_at: statusEvent.started_at,
-        },
-      };
-    });
-  }, []);
-
-  useDriverLocations(handleLocationInsert);
-  useDriverPresence(handlePresenceUpdate, handleStatusUpdate);
+  useEffect(() => {
+    if (Object.keys(locationMap).length > 0) {
+      setLastUpdate(new Date());
+    }
+  }, [locationMap]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current || !window.L) return;
@@ -155,21 +112,23 @@ export function LiveMapPage() {
     };
   }, []);
 
+  const locationList = useMemo(() => Object.values(locationMap), [locationMap]);
+
   const filteredLocations = useMemo(() => {
-    return locations.filter((loc) => {
+    return locationList.filter((loc) => {
       const driver = driverMap.get(loc.driver_id);
       const driverName = (driver?.name ?? driver?.full_name ?? '').toLowerCase();
       const matchesSearch = driverName.includes(searchQuery.toLowerCase());
       const status = statusMap[loc.driver_id];
-      const isOnline = Boolean(status?.is_online);
-      const isGpsActive = new Date(loc.recorded_at) > new Date(Date.now() - 5 * 60 * 1000);
-      const matchesOnline = !onlineOnly || isOnline;
-      const matchesGps = !gpsOnly || isGpsActive;
+      const online = isOnline(status);
+      const isGpsRecent = new Date(loc.recorded_at) > new Date(Date.now() - 5 * 60 * 1000);
+      const matchesOnline = !onlineOnly || online;
+      const matchesGps = !gpsOnly || isGpsRecent;
       const matchesVehicle =
         vehicleFilter === 'all' || status?.vehicle_id === vehicleFilter || loc.vehicle_id === vehicleFilter;
-      return matchesSearch && matchesOnline && matchesGps && matchesVehicle;
+      return matchesSearch && matchesOnline && matchesGps && matchesVehicle && isGpsRecent;
     });
-  }, [locations, driverMap, searchQuery, onlineOnly, gpsOnly, vehicleFilter, statusMap]);
+  }, [locationList, driverMap, searchQuery, onlineOnly, gpsOnly, vehicleFilter, statusMap]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -182,9 +141,9 @@ export function LiveMapPage() {
 
     filteredLocations.forEach((loc) => {
       const status = statusMap[loc.driver_id];
-      const isOnline = Boolean(status?.is_online);
+      const online = isOnline(status);
       const isStale = new Date(loc.recorded_at) < new Date(Date.now() - 5 * 60 * 1000);
-      const color = isOnline ? (isStale ? '#F59E0B' : '#22C55E') : '#6B7280';
+      const color = online ? (isStale ? '#F59E0B' : '#22C55E') : '#6B7280';
       const marker = window.L.marker([loc.lat, loc.lng], {
         icon: window.L.divIcon({
           className: 'driver-marker',
@@ -203,9 +162,7 @@ export function LiveMapPage() {
     }
   }, [filteredLocations, statusMap]);
 
-  const selectedLocation = selectedDriverId
-    ? locations.find((loc) => loc.driver_id === selectedDriverId)
-    : null;
+  const selectedLocation = selectedDriverId ? locationMap[selectedDriverId] : null;
   const selectedDriver = selectedDriverId ? driverMap.get(selectedDriverId) : null;
   const selectedStatus = selectedDriverId ? statusMap[selectedDriverId] : null;
   const selectedVehicle = selectedStatus?.vehicle_id
@@ -285,7 +242,7 @@ export function LiveMapPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {loading && locations.length === 0 ? (
+            {loading && locationList.length === 0 ? (
               <div className="flex justify-center py-16">
                 <Loader className="w-8 h-8 text-[#FF6B35] animate-spin" />
               </div>
@@ -366,7 +323,7 @@ export function LiveMapPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {selectedStatus?.is_online ? (
+                    {isOnline(selectedStatus) ? (
                       <Badge className="bg-green-950 text-green-400 border-green-900">
                         Online
                       </Badge>
@@ -423,7 +380,7 @@ export function LiveMapPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {loading && locations.length === 0 ? (
+                {loading && locationList.length === 0 ? (
                   <div className="flex justify-center py-4">
                     <Loader className="w-6 h-6 text-[#FF6B35] animate-spin" />
                   </div>
@@ -433,6 +390,7 @@ export function LiveMapPage() {
                   filteredLocations.map((location) => {
                     const driver = driverMap.get(location.driver_id);
                     const status = statusMap[location.driver_id];
+                    const online = isOnline(status);
                     const isStale =
                       new Date(location.recorded_at) < new Date(Date.now() - 5 * 60 * 1000);
                     return (
@@ -451,7 +409,7 @@ export function LiveMapPage() {
                           </div>
                           <Badge className="ml-2 flex-shrink-0 bg-green-950 text-green-400 border-green-900 text-xs">
                             <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1 animate-pulse" />
-                            {status?.is_online ? 'Online' : 'Offline'}
+                            {online ? 'Online' : 'Offline'}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-500">
