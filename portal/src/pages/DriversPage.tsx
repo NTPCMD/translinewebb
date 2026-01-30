@@ -1,5 +1,6 @@
 // Drivers management page
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -8,13 +9,48 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
-import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
-import { deleteDriver } from '@/lib/db/drivers';
+import { Search, UserPlus, Trash2, Loader, Eye, Key, ExternalLink } from 'lucide-react';
 import { listVehicles, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
 import { fetchDriversFull, isDriverRow } from '@/lib/drivers';
 import { createClient } from '@supabase/supabase-js';
 import { getEnv } from '@/lib/env';
+import { useDriverLocations } from '@/lib/realtime/useDriverLocations';
+import { useDriverPresence } from '@/lib/realtime/useDriverPresence';
+import { formatDistanceToNow } from 'date-fns';
+
+type DriverStatusRow = {
+  driver_id: string;
+  last_seen_at: string | null;
+  is_online: boolean | null;
+  status_state: string | null;
+  on_break: boolean | null;
+  status_started_at: string | null;
+  last_location_at: string | null;
+  lat: number | null;
+  lng: number | null;
+  speed_kmh: number | null;
+  heading: number | null;
+  vehicle_id: string | null;
+  shift_id: string | null;
+};
+
+type ShiftRow = {
+  id: string;
+  driver_id: string;
+  vehicle_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  status: 'active' | 'ended' | 'cancelled';
+};
+
+type VehicleAssignmentRow = {
+  id: string;
+  driver_id: string;
+  vehicle_id: string;
+  assigned_at: string;
+  unassigned_at: string | null;
+};
 
 export function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,6 +69,9 @@ export function DriversPage() {
     phone: '',
   });
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [statusMap, setStatusMap] = useState<Record<string, DriverStatusRow>>({});
+  const [activeShiftMap, setActiveShiftMap] = useState<Record<string, ShiftRow>>({});
+  const [assignmentMap, setAssignmentMap] = useState<Record<string, VehicleAssignmentRow>>({});
   const [editVehicleDialog, setEditVehicleDialog] = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [editVehicleId, setEditVehicleId] = useState('');
@@ -52,15 +91,25 @@ export function DriversPage() {
     if (!serviceRoleKey) return null;
     return createClient(getEnv('VITE_SUPABASE_URL'), serviceRoleKey);
   }, []);
+  const resolveDriverId = (driver: any) =>
+    driver.driver_id ?? driver.id ?? driver.auth_user_id;
+  const vehicleMap = useMemo(() => {
+    const map = new Map<string, Vehicle>();
+    vehicles.forEach((vehicle) => map.set(vehicle.id, vehicle));
+    return map;
+  }, [vehicles]);
 
   // Fetch drivers (from profiles) and vehicles on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [vehiclesList, driversFull] = await Promise.all([
+        const [vehiclesList, driversFull, statusResponse, shiftsResponse, assignmentResponse] = await Promise.all([
           listVehicles(),
           fetchDriversFull(),
+          supabase.from('view_driver_current_status').select('*'),
+          supabase.from('shifts').select('*').or('status.eq.active,ended_at.is.null'),
+          supabase.from('vehicle_assignments').select('*').is('unassigned_at', null),
         ]);
         // Filter to only drivers, using a robust helper that falls back if `role` is missing
         const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
@@ -69,6 +118,24 @@ export function DriversPage() {
         setTotalCount(onlyDrivers.length ?? 0);
         setActiveCount(onlyDrivers.filter((d: any) => d.status === 'active').length);
         setVehicles(vehiclesList);
+        const statusRows = (statusResponse.data as DriverStatusRow[]) ?? [];
+        const nextStatusMap: Record<string, DriverStatusRow> = {};
+        statusRows.forEach((row) => {
+          nextStatusMap[row.driver_id] = row;
+        });
+        setStatusMap(nextStatusMap);
+        const activeShiftRows = (shiftsResponse.data as ShiftRow[]) ?? [];
+        const nextShiftMap: Record<string, ShiftRow> = {};
+        activeShiftRows.forEach((row) => {
+          nextShiftMap[row.driver_id] = row;
+        });
+        setActiveShiftMap(nextShiftMap);
+        const assignmentRows = (assignmentResponse.data as VehicleAssignmentRow[]) ?? [];
+        const nextAssignmentMap: Record<string, VehicleAssignmentRow> = {};
+        assignmentRows.forEach((row) => {
+          nextAssignmentMap[row.driver_id] = row;
+        });
+        setAssignmentMap(nextAssignmentMap);
         setError(null);
       } catch (err) {
         setError('Failed to load drivers or vehicles');
@@ -80,12 +147,78 @@ export function DriversPage() {
     fetchData();
   }, []);
 
+  const handlePresenceUpdate = useCallback((presence: { driver_id: string; last_seen_at: string }) => {
+    setStatusMap((prev) => {
+      const existing = prev[presence.driver_id] ?? ({ driver_id: presence.driver_id } as DriverStatusRow);
+      return {
+        ...prev,
+        [presence.driver_id]: {
+          ...existing,
+          last_seen_at: presence.last_seen_at,
+          is_online: new Date(presence.last_seen_at) > new Date(Date.now() - 60 * 1000),
+        },
+      };
+    });
+  }, []);
+
+  const handleStatusUpdate = useCallback((statusEvent: { driver_id: string; state: string; started_at: string }) => {
+    setStatusMap((prev) => {
+      const existing = prev[statusEvent.driver_id] ?? ({ driver_id: statusEvent.driver_id } as DriverStatusRow);
+      return {
+        ...prev,
+        [statusEvent.driver_id]: {
+          ...existing,
+          status_state: statusEvent.state,
+          on_break: statusEvent.state === 'break',
+          status_started_at: statusEvent.started_at,
+        },
+      };
+    });
+  }, []);
+
+  const handleLocationInsert = useCallback((newLocation: { driver_id: string; recorded_at: string; lat: number; lng: number; speed_kmh?: number | null; heading?: number | null; vehicle_id?: string | null; shift_id?: string | null }) => {
+    setStatusMap((prev) => {
+      const existing = prev[newLocation.driver_id] ?? ({ driver_id: newLocation.driver_id } as DriverStatusRow);
+      return {
+        ...prev,
+        [newLocation.driver_id]: {
+          ...existing,
+          last_location_at: newLocation.recorded_at,
+          lat: newLocation.lat,
+          lng: newLocation.lng,
+          speed_kmh: newLocation.speed_kmh ?? null,
+          heading: newLocation.heading ?? null,
+          vehicle_id: newLocation.vehicle_id ?? existing.vehicle_id,
+          shift_id: newLocation.shift_id ?? existing.shift_id,
+        },
+      };
+    });
+  }, []);
+
+  useDriverPresence(handlePresenceUpdate, handleStatusUpdate);
+  useDriverLocations(handleLocationInsert);
+
   const filteredDrivers = drivers.filter(
     (driver) =>
       (driver.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         driver.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         driver.phone?.includes(searchQuery))
   );
+
+  const sortedDrivers = useMemo(() => {
+    return [...filteredDrivers].sort((a, b) => {
+      const aId = resolveDriverId(a);
+      const bId = resolveDriverId(b);
+      const aStatus = aId ? statusMap[aId] : undefined;
+      const bStatus = bId ? statusMap[bId] : undefined;
+      const aOnline = aStatus?.is_online ? 1 : 0;
+      const bOnline = bStatus?.is_online ? 1 : 0;
+      if (aOnline !== bOnline) return bOnline - aOnline;
+      const aLastSeen = aStatus?.last_seen_at ? new Date(aStatus.last_seen_at).getTime() : 0;
+      const bLastSeen = bStatus?.last_seen_at ? new Date(bStatus.last_seen_at).getTime() : 0;
+      return bLastSeen - aLastSeen;
+    });
+  }, [filteredDrivers, resolveDriverId, statusMap]);
 
   // Add driver via Supabase Auth (creates profile automatically)
   const handleAddDriver = async () => {
@@ -278,73 +411,133 @@ export function DriversPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-800 hover:bg-transparent">
-                    <TableHead className="text-gray-400">Driver Name</TableHead>
-                    <TableHead className="text-gray-400">Email</TableHead>
-                    <TableHead className="text-gray-400">Phone</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
+                    <TableHead className="text-gray-400">Driver</TableHead>
+                    <TableHead className="text-gray-400">Online</TableHead>
+                    <TableHead className="text-gray-400">Break</TableHead>
+                    <TableHead className="text-gray-400">Current Vehicle</TableHead>
+                    <TableHead className="text-gray-400">Current Shift</TableHead>
+                    <TableHead className="text-gray-400">Last Seen</TableHead>
+                    <TableHead className="text-gray-400">Last Location</TableHead>
                     <TableHead className="text-gray-400 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDrivers.length === 0 ? (
+                  {sortedDrivers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                         No drivers found
                       </TableCell>
                     </TableRow>
                   ) : (
                     <>
-                      {filteredDrivers.map((driver) => (
-                      <TableRow key={driver.driver_id} className="border-gray-800">
-                        <TableCell className="font-medium text-white">{driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}</TableCell>
-                        <TableCell className="text-gray-300">{driver.profile_email ?? driver.email}</TableCell>
-                        <TableCell className="text-gray-300">{driver.phone}</TableCell>
-                        <TableCell className="text-gray-300">
-                          {(() => {
-                            const vehicle = findVehicleForDriver(driver);
-                            return vehicle ? vehicle.plate_number : <span className="text-gray-500">Unassigned</span>;
-                          })()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
-                              onClick={() => {
-                                setEditDriver(driver);
-                                const vehicle = findVehicleForDriver(driver);
-                                setEditVehicleId(vehicle ? vehicle.id : '');
-                                setEditVehicleDialog(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-400 hover:text-[#FF6B35] h-8 w-8 p-0"
-                              onClick={() => {
-                                setPasswordDriver(driver);
-                                setNewPassword('');
-                                setConfirmPassword('');
-                                setPasswordDialogOpen(true);
-                              }}
-                            >
-                              <Key className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
-                              onClick={() => handleDeleteClick(driver)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      ))}
+                      {sortedDrivers.map((driver) => {
+                        const driverId = resolveDriverId(driver);
+                        const status = driverId ? statusMap[driverId] : undefined;
+                        const activeShift = driverId ? activeShiftMap[driverId] : undefined;
+                        const assignment = driverId ? assignmentMap[driverId] : undefined;
+                        const vehicleId = status?.vehicle_id ?? activeShift?.vehicle_id ?? assignment?.vehicle_id;
+                        const vehicle = vehicleId ? vehicleMap.get(vehicleId) : findVehicleForDriver(driver);
+                        return (
+                          <TableRow key={driver.driver_id ?? driverId} className="border-gray-800">
+                            <TableCell className="font-medium text-white">
+                              <div>
+                                <p>{driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}</p>
+                                <p className="text-xs text-gray-500">{driver.profile_email ?? driver.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {status?.is_online ? (
+                                <Badge className="bg-green-950 text-green-400 border-green-900">Online</Badge>
+                              ) : (
+                                <Badge className="bg-gray-900 text-gray-300 border-gray-700">Offline</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {status?.on_break ? (
+                                <Badge className="bg-amber-950 text-amber-300 border-amber-800">On Break</Badge>
+                              ) : (
+                                <Badge className="bg-gray-900 text-gray-300 border-gray-700">No</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-gray-300">
+                              {vehicle ? (
+                                <span>
+                                  {vehicle.plate_number} • {vehicle.make} {vehicle.model}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">Unassigned</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-gray-300">
+                              {activeShift ? (
+                                <Badge className="bg-blue-950 text-blue-300 border-blue-800">On Shift</Badge>
+                              ) : (
+                                <Badge className="bg-gray-900 text-gray-300 border-gray-700">Off Shift</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-gray-300">
+                              {status?.last_seen_at
+                                ? formatDistanceToNow(new Date(status.last_seen_at), { addSuffix: true })
+                                : 'Never'}
+                            </TableCell>
+                            <TableCell className="text-gray-300">
+                              {status?.last_location_at
+                                ? formatDistanceToNow(new Date(status.last_location_at), { addSuffix: true })
+                                : 'No GPS'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-2">
+                                {driverId && (
+                                  <Button
+                                    asChild
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-gray-400 hover:text-emerald-400 h-8 w-8 p-0"
+                                  >
+                                    <Link to={`/drivers/${driverId}`}>
+                                      <ExternalLink className="w-4 h-4" />
+                                    </Link>
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setEditDriver(driver);
+                                    const foundVehicle = findVehicleForDriver(driver);
+                                    setEditVehicleId(foundVehicle ? foundVehicle.id : '');
+                                    setEditVehicleDialog(true);
+                                  }}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-400 hover:text-[#FF6B35] h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setPasswordDriver(driver);
+                                    setNewPassword('');
+                                    setConfirmPassword('');
+                                    setPasswordDialogOpen(true);
+                                  }}
+                                >
+                                  <Key className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
+                                  onClick={() => handleDeleteClick(driver)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </>
                   )}
                       {/* Edit Vehicle Assignment Dialog */}
