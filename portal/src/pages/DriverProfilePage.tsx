@@ -82,15 +82,16 @@ export function DriverProfilePage() {
   const [shiftPage, setShiftPage] = useState(1);
   const [assignmentPage, setAssignmentPage] = useState(1);
   const [odometerPage, setOdometerPage] = useState(1);
+  const [statusPage, setStatusPage] = useState(1);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [shiftCount, setShiftCount] = useState(0);
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [assignmentCount, setAssignmentCount] = useState(0);
   const [odometerLogs, setOdometerLogs] = useState<OdometerRow[]>([]);
   const [odometerCount, setOdometerCount] = useState(0);
+  const [statusEvents, setStatusEvents] = useState<any[]>([]);
+  const [statusCount, setStatusCount] = useState(0);
   const [breakCounts, setBreakCounts] = useState<Record<string, number>>({});
-  const [notes, setNotes] = useState<any[]>([]);
-  const [incidents, setIncidents] = useState<any[]>([]);
 
   const vehicleMap = useMemo(() => {
     const map = new Map<string, Vehicle>();
@@ -219,20 +220,24 @@ export function DriverProfilePage() {
 
   useEffect(() => {
     if (!driverId) return;
-    const fetchNotes = async () => {
-      try {
-        const [notesResponse, incidentsResponse] = await Promise.all([
-          supabase.from('notes').select('*').eq('driver_id', driverId).order('created_at', { ascending: false }).limit(20),
-          supabase.from('incidents').select('*').eq('driver_id', driverId).order('created_at', { ascending: false }).limit(20),
-        ]);
-        setNotes(notesResponse.data ?? []);
-        setIncidents(incidentsResponse.data ?? []);
-      } catch (err) {
-        console.warn('Notes/Incidents tables not available', err);
+    const fetchStatusEvents = async () => {
+      const from = (statusPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error: fetchError, count } = await supabase
+        .from('driver_status_events')
+        .select('*', { count: 'exact' })
+        .eq('driver_id', driverId)
+        .order('started_at', { ascending: false })
+        .range(from, to);
+      if (fetchError) {
+        console.error(fetchError);
+        return;
       }
+      setStatusEvents(data ?? []);
+      setStatusCount(count ?? 0);
     };
-    fetchNotes();
-  }, [driverId]);
+    fetchStatusEvents();
+  }, [driverId, statusPage]);
 
   if (!driverId) {
     return <p className="text-gray-400">Driver ID missing.</p>;
@@ -254,10 +259,14 @@ export function DriverProfilePage() {
   const lastSeenLabel = status?.last_seen_at
     ? formatDistanceToNowStrict(new Date(status.last_seen_at), { addSuffix: true })
     : 'Never';
+  const isOnline = status?.last_seen_at
+    ? new Date(status.last_seen_at) > new Date(Date.now() - 60 * 1000)
+    : Boolean(status?.is_online);
 
   const totalShiftPages = Math.max(1, Math.ceil(shiftCount / PAGE_SIZE));
   const totalAssignmentPages = Math.max(1, Math.ceil(assignmentCount / PAGE_SIZE));
   const totalOdometerPages = Math.max(1, Math.ceil(odometerCount / PAGE_SIZE));
+  const totalStatusPages = Math.max(1, Math.ceil(statusCount / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
@@ -278,7 +287,7 @@ export function DriverProfilePage() {
           <TabsTrigger value="shifts">Shifts</TabsTrigger>
           <TabsTrigger value="assignments">Vehicle Assignments</TabsTrigger>
           <TabsTrigger value="odometer">Odometer</TabsTrigger>
-          <TabsTrigger value="notes">Notes/Incidents</TabsTrigger>
+          <TabsTrigger value="status">Status History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -290,7 +299,7 @@ export function DriverProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
-                  {status?.is_online ? (
+                  {isOnline ? (
                     <Badge className="bg-green-950 text-green-400 border-green-900">Online</Badge>
                   ) : (
                     <Badge className="bg-gray-900 text-gray-300 border-gray-700">Offline</Badge>
@@ -607,54 +616,72 @@ export function DriverProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="notes">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-[#161616] border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white">Notes</CardTitle>
-                <CardDescription className="text-gray-400">Administrative notes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {notes.length === 0 ? (
-                  <p className="text-sm text-gray-500">No notes recorded.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {notes.map((note) => (
-                      <li key={note.id} className="p-3 bg-[#0F0F0F] border border-gray-800 rounded">
-                        <p className="text-sm text-gray-300">{note.content ?? note.note ?? 'Note'}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {note.created_at ? format(new Date(note.created_at), 'MMM dd, HH:mm') : ''}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-[#161616] border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white">Incidents</CardTitle>
-                <CardDescription className="text-gray-400">Warnings and incidents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {incidents.length === 0 ? (
-                  <p className="text-sm text-gray-500">No incidents reported.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {incidents.map((incident) => (
-                      <li key={incident.id} className="p-3 bg-[#0F0F0F] border border-gray-800 rounded">
-                        <p className="text-sm text-gray-300">{incident.description ?? incident.title ?? 'Incident'}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {incident.created_at ? format(new Date(incident.created_at), 'MMM dd, HH:mm') : ''}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        <TabsContent value="status">
+          <Card className="bg-[#161616] border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white">Status History</CardTitle>
+              <CardDescription className="text-gray-400">Driver status events timeline</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-800 hover:bg-transparent">
+                    <TableHead className="text-gray-400">State</TableHead>
+                    <TableHead className="text-gray-400">Started</TableHead>
+                    <TableHead className="text-gray-400">Ended</TableHead>
+                    <TableHead className="text-gray-400">Shift</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {statusEvents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                        No status events found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    statusEvents.map((event) => (
+                      <TableRow key={event.id} className="border-gray-800">
+                        <TableCell className="text-gray-300 capitalize">{event.state ?? 'unknown'}</TableCell>
+                        <TableCell className="text-gray-300">
+                          {event.started_at ? format(new Date(event.started_at), 'MMM dd, HH:mm') : '—'}
+                        </TableCell>
+                        <TableCell className="text-gray-300">
+                          {event.ended_at ? format(new Date(event.ended_at), 'MMM dd, HH:mm') : 'Active'}
+                        </TableCell>
+                        <TableCell className="text-gray-300">
+                          {event.shift_id ?? '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-gray-500">Page {statusPage} of {totalStatusPages}</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-300"
+                    disabled={statusPage === 1}
+                    onClick={() => setStatusPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-300"
+                    disabled={statusPage >= totalStatusPages}
+                    onClick={() => setStatusPage((prev) => Math.min(totalStatusPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

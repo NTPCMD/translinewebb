@@ -1,5 +1,5 @@
 // Drivers management page
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -9,31 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
-import { Search, UserPlus, Trash2, Loader, Eye, Key, ExternalLink } from 'lucide-react';
+import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
 import { listVehicles, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
 import { fetchDriversFull, isDriverRow } from '@/lib/drivers';
 import { createClient } from '@supabase/supabase-js';
 import { getEnv } from '@/lib/env';
-import { useDriverLocations } from '@/lib/realtime/useDriverLocations';
-import { useDriverPresence } from '@/lib/realtime/useDriverPresence';
+import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
 import { formatDistanceToNow } from 'date-fns';
-
-type DriverStatusRow = {
-  driver_id: string;
-  last_seen_at: string | null;
-  is_online: boolean | null;
-  status_state: string | null;
-  on_break: boolean | null;
-  status_started_at: string | null;
-  last_location_at: string | null;
-  lat: number | null;
-  lng: number | null;
-  speed_kmh: number | null;
-  heading: number | null;
-  vehicle_id: string | null;
-  shift_id: string | null;
-};
 
 type ShiftRow = {
   id: string;
@@ -69,7 +52,7 @@ export function DriversPage() {
     phone: '',
   });
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [statusMap, setStatusMap] = useState<Record<string, DriverStatusRow>>({});
+  const { statusMap, setStatusMap } = useDriverLiveState();
   const [activeShiftMap, setActiveShiftMap] = useState<Record<string, ShiftRow>>({});
   const [assignmentMap, setAssignmentMap] = useState<Record<string, VehicleAssignmentRow>>({});
   const [editVehicleDialog, setEditVehicleDialog] = useState(false);
@@ -98,6 +81,8 @@ export function DriversPage() {
     vehicles.forEach((vehicle) => map.set(vehicle.id, vehicle));
     return map;
   }, [vehicles]);
+  const isOnline = (status?: DriverLiveStatus) =>
+    isOnlineFromLastSeen(status?.last_seen_at) || Boolean(status?.is_online);
 
   // Fetch drivers (from profiles) and vehicles on mount
   useEffect(() => {
@@ -118,10 +103,13 @@ export function DriversPage() {
         setTotalCount(onlyDrivers.length ?? 0);
         setActiveCount(onlyDrivers.filter((d: any) => d.status === 'active').length);
         setVehicles(vehiclesList);
-        const statusRows = (statusResponse.data as DriverStatusRow[]) ?? [];
-        const nextStatusMap: Record<string, DriverStatusRow> = {};
+        const statusRows = (statusResponse.data as DriverLiveStatus[]) ?? [];
+        const nextStatusMap: Record<string, DriverLiveStatus> = {};
         statusRows.forEach((row) => {
-          nextStatusMap[row.driver_id] = row;
+          nextStatusMap[row.driver_id] = {
+            ...row,
+            is_online: isOnlineFromLastSeen(row.last_seen_at),
+          };
         });
         setStatusMap(nextStatusMap);
         const activeShiftRows = (shiftsResponse.data as ShiftRow[]) ?? [];
@@ -147,57 +135,6 @@ export function DriversPage() {
     fetchData();
   }, []);
 
-  const handlePresenceUpdate = useCallback((presence: { driver_id: string; last_seen_at: string }) => {
-    setStatusMap((prev) => {
-      const existing = prev[presence.driver_id] ?? ({ driver_id: presence.driver_id } as DriverStatusRow);
-      return {
-        ...prev,
-        [presence.driver_id]: {
-          ...existing,
-          last_seen_at: presence.last_seen_at,
-          is_online: new Date(presence.last_seen_at) > new Date(Date.now() - 60 * 1000),
-        },
-      };
-    });
-  }, []);
-
-  const handleStatusUpdate = useCallback((statusEvent: { driver_id: string; state: string; started_at: string }) => {
-    setStatusMap((prev) => {
-      const existing = prev[statusEvent.driver_id] ?? ({ driver_id: statusEvent.driver_id } as DriverStatusRow);
-      return {
-        ...prev,
-        [statusEvent.driver_id]: {
-          ...existing,
-          status_state: statusEvent.state,
-          on_break: statusEvent.state === 'break',
-          status_started_at: statusEvent.started_at,
-        },
-      };
-    });
-  }, []);
-
-  const handleLocationInsert = useCallback((newLocation: { driver_id: string; recorded_at: string; lat: number; lng: number; speed_kmh?: number | null; heading?: number | null; vehicle_id?: string | null; shift_id?: string | null }) => {
-    setStatusMap((prev) => {
-      const existing = prev[newLocation.driver_id] ?? ({ driver_id: newLocation.driver_id } as DriverStatusRow);
-      return {
-        ...prev,
-        [newLocation.driver_id]: {
-          ...existing,
-          last_location_at: newLocation.recorded_at,
-          lat: newLocation.lat,
-          lng: newLocation.lng,
-          speed_kmh: newLocation.speed_kmh ?? null,
-          heading: newLocation.heading ?? null,
-          vehicle_id: newLocation.vehicle_id ?? existing.vehicle_id,
-          shift_id: newLocation.shift_id ?? existing.shift_id,
-        },
-      };
-    });
-  }, []);
-
-  useDriverPresence(handlePresenceUpdate, handleStatusUpdate);
-  useDriverLocations(handleLocationInsert);
-
   const filteredDrivers = drivers.filter(
     (driver) =>
       (driver.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -211,8 +148,8 @@ export function DriversPage() {
       const bId = resolveDriverId(b);
       const aStatus = aId ? statusMap[aId] : undefined;
       const bStatus = bId ? statusMap[bId] : undefined;
-      const aOnline = aStatus?.is_online ? 1 : 0;
-      const bOnline = bStatus?.is_online ? 1 : 0;
+      const aOnline = isOnline(aStatus) ? 1 : 0;
+      const bOnline = isOnline(bStatus) ? 1 : 0;
       if (aOnline !== bOnline) return bOnline - aOnline;
       const aLastSeen = aStatus?.last_seen_at ? new Date(aStatus.last_seen_at).getTime() : 0;
       const bLastSeen = bStatus?.last_seen_at ? new Date(bStatus.last_seen_at).getTime() : 0;
@@ -413,18 +350,19 @@ export function DriversPage() {
                   <TableRow className="border-gray-800 hover:bg-transparent">
                     <TableHead className="text-gray-400">Driver</TableHead>
                     <TableHead className="text-gray-400">Online</TableHead>
+                    <TableHead className="text-gray-400">Last Seen</TableHead>
+                    <TableHead className="text-gray-400">Status</TableHead>
                     <TableHead className="text-gray-400">Break</TableHead>
                     <TableHead className="text-gray-400">Current Vehicle</TableHead>
                     <TableHead className="text-gray-400">Current Shift</TableHead>
-                    <TableHead className="text-gray-400">Last Seen</TableHead>
                     <TableHead className="text-gray-400">Last Location</TableHead>
-                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                    <TableHead className="text-gray-400 text-right">View Profile</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedDrivers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                         No drivers found
                       </TableCell>
                     </TableRow>
@@ -446,10 +384,24 @@ export function DriversPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {status?.is_online ? (
+                              {isOnline(status) ? (
                                 <Badge className="bg-green-950 text-green-400 border-green-900">Online</Badge>
                               ) : (
                                 <Badge className="bg-gray-900 text-gray-300 border-gray-700">Offline</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-gray-300">
+                              {status?.last_seen_at
+                                ? formatDistanceToNow(new Date(status.last_seen_at), { addSuffix: true })
+                                : 'Never'}
+                            </TableCell>
+                            <TableCell>
+                              {status?.status_state ? (
+                                <Badge className="bg-blue-950 text-blue-300 border-blue-800">
+                                  {status.status_state}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-gray-900 text-gray-300 border-gray-700">Unknown</Badge>
                               )}
                             </TableCell>
                             <TableCell>
@@ -476,11 +428,6 @@ export function DriversPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-gray-300">
-                              {status?.last_seen_at
-                                ? formatDistanceToNow(new Date(status.last_seen_at), { addSuffix: true })
-                                : 'Never'}
-                            </TableCell>
-                            <TableCell className="text-gray-300">
                               {status?.last_location_at
                                 ? formatDistanceToNow(new Date(status.last_location_at), { addSuffix: true })
                                 : 'No GPS'}
@@ -492,10 +439,10 @@ export function DriversPage() {
                                     asChild
                                     variant="ghost"
                                     size="sm"
-                                    className="text-gray-400 hover:text-emerald-400 h-8 w-8 p-0"
+                                    className="text-gray-300 hover:text-emerald-400"
                                   >
                                     <Link to={`/drivers/${driverId}`}>
-                                      <ExternalLink className="w-4 h-4" />
+                                      View profile
                                     </Link>
                                   </Button>
                                 )}
