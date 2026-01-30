@@ -7,6 +7,8 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { DriversPage } from '@/pages/DriversPage';
 import { VehiclesPage } from '@/pages/VehiclesPage';
 import { LiveMapPage } from '@/pages/LiveMapPage';
+import { OdometerLogsPage } from '@/pages/OdometerLogsPage';
+import { DriverProfilePage } from '@/pages/DriverProfilePage';
 import { ShiftsPage } from '@/pages/ShiftsPage';
 import { MaintenancePage } from '@/pages/MaintenancePage';
 import { LogsPage } from '@/pages/LogsPage';
@@ -29,8 +31,10 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <DashboardPage /> },
         { path: 'drivers', element: <DriversPage /> },
+        { path: 'drivers/:id', element: <DriverProfilePage /> },
         { path: 'vehicles', element: <VehiclesPage /> },
         { path: 'live-map', element: <LiveMapPage /> },
+        { path: 'odometer', element: <OdometerLogsPage /> },
         { path: 'shifts', element: <ShiftsPage /> },
         { path: 'maintenance', element: <MaintenancePage /> },
         { path: 'logs', element: <LogsPage /> },
