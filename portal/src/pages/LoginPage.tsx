@@ -1,6 +1,6 @@
 // Login page for TransLine Admin Portal
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate } from 'react-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -15,7 +15,6 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { user, signIn } = useAuth();
-  const navigate = useNavigate();
 
   // Redirect if already logged in
   if (user) {
@@ -47,8 +46,7 @@ export function LoginPage() {
         setError(errorMessage);
         setLoading(false);
       } else {
-        // Success - navigate happens automatically via auth state change
-        navigate('/');
+        // Success - navigation happens automatically via auth state change
       }
     } catch (err) {
       console.error('Sign in error:', err);
