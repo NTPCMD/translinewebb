@@ -66,12 +66,14 @@
     "vaul": "1.1.2"
   },
   "devDependencies": {
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-replace": "^6.0.2",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "10.4.20",
     "postcss": "8.4.47",
     "tailwindcss": "3.4.14",
     "vite": "^7.3.1",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^1.2.0"
   },
   "peerDependencies": {
     "react": "^18.3.1",
