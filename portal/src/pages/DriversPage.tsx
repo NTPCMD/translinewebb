@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
 import { listVehicles, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
-import { fetchDriversFull, isDriverRow } from '@/lib/drivers';
+import { fetchDriversFull, fetchDriversFullCount, isDriverRow } from '@/lib/drivers';
 import { createClient } from '@supabase/supabase-js';
 import { getEnv } from '@/lib/env';
 import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
@@ -89,9 +89,11 @@ export function DriversPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [vehiclesList, driversFull, statusResponse, shiftsResponse, assignmentResponse] = await Promise.all([
+        const [vehiclesList, driversFull, totalDriversCount, activeDriversCount, statusResponse, shiftsResponse, assignmentResponse] = await Promise.all([
           listVehicles(),
           fetchDriversFull(),
+          fetchDriversFullCount(),
+          fetchDriversFullCount({ status: 'active' }),
           supabase.from('view_driver_current_status').select('*'),
           supabase.from('shifts').select('*').or('status.eq.active,ended_at.is.null'),
           supabase.from('vehicle_assignments').select('*').is('unassigned_at', null),
@@ -100,8 +102,8 @@ export function DriversPage() {
         const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
         setDrivers(onlyDrivers);
         console.log('DriversPage: loaded drivers count=', onlyDrivers.length);
-        setTotalCount(onlyDrivers.length ?? 0);
-        setActiveCount(onlyDrivers.filter((d: any) => d.status === 'active').length);
+        setTotalCount(totalDriversCount ?? onlyDrivers.length ?? 0);
+        setActiveCount(activeDriversCount ?? onlyDrivers.filter((d: any) => d.status === 'active').length);
         setVehicles(vehiclesList);
         const statusRows = (statusResponse.data as DriverLiveStatus[]) ?? [];
         const nextStatusMap: Record<string, DriverLiveStatus> = {};
@@ -169,6 +171,15 @@ export function DriversPage() {
       return;
     }
     try {
+      const insertPayload = {
+        email: formData.email,
+        password: '********',
+        metadata: { full_name: formData.name, phone: formData.phone, status: 'active' },
+        org_id: undefined,
+        company_id: undefined,
+        restaurant_id: undefined,
+      };
+      console.info('DriversPage: insert=auth.users via supabase.auth.signUp payload=', insertPayload);
       // Register driver in Supabase Auth (creates profile)
       const { error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
@@ -176,17 +187,40 @@ export function DriversPage() {
         options: { data: { full_name: formData.name, phone: formData.phone, status: 'active' } },
       });
       if (signUpError) {
+        console.warn('DriversPage: signUp error=', signUpError);
         setError(signUpError.message);
         return;
       }
       // Refetch drivers list from drivers_full
-      const driversFull = await fetchDriversFull();
-      const onlyDrivers = (driversFull ?? []).filter((d: any) => d.role === 'driver');
+      const previousTotal = totalCount;
+      const [driversFull, totalDriversCount, activeDriversCount] = await Promise.all([
+        fetchDriversFull(),
+        fetchDriversFullCount(),
+        fetchDriversFullCount({ status: 'active' }),
+      ]);
+      const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
+      const normalizedEmail = formData.email.toLowerCase();
+      const createdDriver = onlyDrivers.find((driver: any) =>
+        (driver.profile_email ?? driver.email ?? '').toLowerCase() === normalizedEmail
+      );
       setDrivers(onlyDrivers);
-      setTotalCount(onlyDrivers.length);
+      setTotalCount(totalDriversCount ?? onlyDrivers.length);
+      setActiveCount(activeDriversCount ?? onlyDrivers.filter((d: any) => d.status === 'active').length);
+      if (!createdDriver || (totalDriversCount ?? onlyDrivers.length) <= previousTotal) {
+        const debugDetails = {
+          expectedEmail: formData.email,
+          listLength: onlyDrivers.length,
+          totalCount: totalDriversCount ?? onlyDrivers.length,
+          previousTotal,
+        };
+        console.error('DriversPage: verification failed after create', debugDetails);
+        setError(`Verification failed after create. Details: ${JSON.stringify(debugDetails)}`);
+      }
       setDialogOpen(false);
       setFormData({ name: '', email: '', password: '', phone: '' });
-      setError(null);
+      if (createdDriver) {
+        setError(null);
+      }
     } catch (err) {
       setError('Failed to create driver');
       console.error(err);
