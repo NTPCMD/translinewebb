@@ -66,6 +66,7 @@
     "vaul": "1.1.2"
   },
   "devDependencies": {
+    "@rollup/plugin-babel": "^6.0.4",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "10.4.20",
     "postcss": "8.4.47",
