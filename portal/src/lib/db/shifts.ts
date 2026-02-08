@@ -4,19 +4,17 @@ import { supabase } from '../supabase';
 export interface Shift {
   id: string;
   driver_id: string;
-  vehicle_id: string;
-  start_time: string;
-  end_time?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
+  vehicle_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  status: 'active' | 'ended' | 'cancelled';
 }
 
 export async function listShifts(): Promise<Shift[]> {
   const { data, error } = await supabase
     .from('shifts')
     .select('*')
-    .order('start_time', { ascending: false });
+    .order('started_at', { ascending: false });
 
   if (error) throw error;
   return data || [];
@@ -26,8 +24,8 @@ export async function listActiveShifts(): Promise<Shift[]> {
   const { data, error } = await supabase
     .from('shifts')
     .select('*')
-    .is('end_time', null)
-    .order('start_time', { ascending: false });
+    .or('status.eq.active,ended_at.is.null')
+    .order('started_at', { ascending: false });
 
   if (error) throw error;
   return data || [];
@@ -77,14 +75,14 @@ export async function deleteShift(id: string): Promise<void> {
 }
 
 export async function endShift(id: string): Promise<Shift> {
-  return updateShift(id, { end_time: new Date().toISOString() });
+  return updateShift(id, { ended_at: new Date().toISOString(), status: 'ended' });
 }
 
 export async function countActiveShifts(): Promise<number> {
   const { count, error } = await supabase
     .from('shifts')
     .select('*', { count: 'exact', head: true })
-    .is('end_time', null);
+    .or('status.eq.active,ended_at.is.null');
 
   if (error) throw error;
   return count || 0;
@@ -99,8 +97,8 @@ export async function countTodayShifts(): Promise<number> {
   const { count, error } = await supabase
     .from('shifts')
     .select('*', { count: 'exact', head: true })
-    .gte('start_time', today.toISOString())
-    .lt('start_time', tomorrow.toISOString());
+    .gte('started_at', today.toISOString())
+    .lt('started_at', tomorrow.toISOString());
 
   if (error) throw error;
   return count || 0;

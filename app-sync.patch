@@ -1,0 +1,612 @@
+diff --git a/app.json b/app.json
+index 56d7b85..ae56bda 100644
+--- a/app.json
++++ b/app.json
+@@ -4,6 +4,7 @@
+     "slug": "transline",
+     "version": "1.0.0",
+     "sdkVersion": "54.0.0",
++    "platforms": ["ios", "android", "web"],
+     "orientation": "portrait",
+     "icon": "./assets/icon.png",
+     "scheme": "transline",
+diff --git a/src/lib/offlineQueue.ts b/src/lib/offlineQueue.ts
+index 2fa4161..2a15b7d 100644
+--- a/src/lib/offlineQueue.ts
++++ b/src/lib/offlineQueue.ts
+@@ -17,6 +17,16 @@ export interface QueuedEvent {
+ 
+ type QueueChangeCallback = (queue: QueuedEvent[]) => void;
+ 
++const normalizeSeverity = (value: unknown): string =>
++  typeof value === 'string' && value.trim() ? value.trim() : 'low';
++
++const formatIncidentDescription = (metadata: Record<string, unknown>): string => {
++  const title = typeof metadata.title === 'string' ? metadata.title.trim() : '';
++  const detail = typeof metadata.description === 'string' ? metadata.description.trim() : '';
++  if (title && detail) return `${title}: ${detail}`;
++  return title || detail || 'Incident reported.';
++};
++
+ class OfflineQueue {
+   private queue: QueuedEvent[] = [];
+   private isSyncing: boolean = false;
+@@ -163,6 +173,9 @@ class OfflineQueue {
+       this.notifySubscribers();
+ 
+       try {
++        const eventType = event.eventType;
++        const metadata = (event.payload?.metadata ?? {}) as Record<string, unknown>;
++
+         // Insert event into Supabase
+         const { error } = await supabase.from('events').insert({
+           shift_id: event.payload.shift_id,
+@@ -173,7 +186,7 @@ class OfflineQueue {
+           lat: event.payload.lat || null,
+           lng: event.payload.lng || null,
+           heading: event.payload.heading || null,
+-          metadata: event.payload.metadata || {},
++          metadata,
+           status: 'pending',
+         });
+ 
+@@ -181,6 +194,105 @@ class OfflineQueue {
+           throw error;
+         }
+ 
++        if (eventType === 'break_start') {
++          const { error: statusError } = await supabase.from('driver_status_events').insert({
++            driver_id: event.payload.driver_id,
++            shift_id: event.payload.shift_id,
++            state: 'break',
++            started_at: event.timestamp,
++            meta: metadata,
++          });
++          if (statusError) throw statusError;
++        }
++
++        if (eventType === 'break_end') {
++          let breakRow: { id: string; driver_id: string; shift_id: string | null } | null = null;
++          if (event.payload?.id) {
++            const { data, error: byIdError } = await supabase
++              .from('driver_status_events')
++              .select('id, driver_id, shift_id')
++              .eq('id', event.payload.id)
++              .maybeSingle();
++            if (byIdError) throw byIdError;
++            breakRow = data ?? null;
++          }
++
++          if (!breakRow) {
++            const { data, error: breakFetchError } = await supabase
++              .from('driver_status_events')
++              .select('id, driver_id, shift_id')
++              .eq('driver_id', event.payload.driver_id)
++              .eq('state', 'break')
++              .is('ended_at', null)
++              .order('started_at', { ascending: false })
++              .limit(1)
++              .maybeSingle();
++            if (breakFetchError) throw breakFetchError;
++            breakRow = data ?? null;
++          }
++
++          if (breakRow?.id) {
++            const { error: breakEndError } = await supabase
++              .from('driver_status_events')
++              .update({ ended_at: event.timestamp })
++              .eq('id', breakRow.id);
++            if (breakEndError) throw breakEndError;
++          }
++
++          const { error: idleError } = await supabase.from('driver_status_events').insert({
++            driver_id: breakRow?.driver_id ?? event.payload.driver_id,
++            shift_id: breakRow?.shift_id ?? event.payload.shift_id ?? null,
++            state: 'idle',
++            started_at: event.timestamp,
++            meta: { source: 'break_end' },
++          });
++          if (idleError) throw idleError;
++        }
++
++        const secondaryPayload = {
++          shift_id: event.payload.shift_id,
++          driver_id: event.payload.driver_id,
++          vehicle_id: event.payload.vehicle_id,
++          occurred_at: event.timestamp,
++          ...metadata,
++        };
++
++        if (eventType === 'fuel_log') {
++          const { error: fuelError } = await supabase.from('fuel_logs').insert(secondaryPayload);
++          if (fuelError) throw fuelError;
++        }
++
++        if (eventType === 'incident') {
++          const { error: incidentError } = await supabase.from('incidents').insert(secondaryPayload);
++          if (incidentError) throw incidentError;
++        }
++
++        if (eventType === 'note') {
++          const { error: noteError } = await supabase.from('notes').insert(secondaryPayload);
++          if (noteError) throw noteError;
++        }
++
++        if (eventType === 'incident' || eventType === 'note') {
++          const logContext = (event.payload?.logContext ?? {}) as {
++            driver_name?: string | null;
++            vehicle_plate?: string | null;
++          };
++          const logPayload = {
++            driver_name: logContext.driver_name ?? 'Unknown',
++            vehicle_plate: logContext.vehicle_plate ?? null,
++            log_type: eventType === 'incident' ? 'incident' : 'general',
++            description:
++              eventType === 'incident'
++                ? formatIncidentDescription(metadata)
++                : String(metadata.note_text ?? 'Note submitted.'),
++            severity: eventType === 'incident' ? normalizeSeverity(metadata.severity) : 'low',
++            created_at: event.timestamp,
++          };
++
++          const { error: logError } = await supabase.from('driver_logs').insert(logPayload);
++          if (logError) throw logError;
++        }
++
+         // Success - remove from queue
+         console.log(`Successfully synced event: ${event.eventType}`, event.id);
+       } catch (error: any) {
+diff --git a/src/lib/shifts.ts b/src/lib/shifts.ts
+index 7a86aed..07f48ce 100644
+--- a/src/lib/shifts.ts
++++ b/src/lib/shifts.ts
+@@ -97,7 +97,7 @@ export async function endShift(
+     const payload = {
+       id: shiftId,
+       ended_at: new Date().toISOString(),
+-      status: 'completed',
++      status: 'ended',
+       end_odometer: endOdometerReading,
+     };
+ 
+@@ -129,19 +129,34 @@ export async function startBreak(shiftId: string): Promise<{ breakId: string | n
+   try {
+     const isOnline = await networkMonitor.isOnline();
+ 
++    const startedAt = new Date().toISOString();
++    const { data: shiftRow, error: shiftError } = await supabase
++      .from('shifts')
++      .select('driver_id')
++      .eq('id', shiftId)
++      .maybeSingle();
++
++    if (shiftError || !shiftRow?.driver_id) {
++      const errorMsg = shiftError?.message ?? 'Unable to resolve driver for shift.';
++      console.error('[Break] Error resolving driver:', errorMsg);
++      return { breakId: null, error: errorMsg };
++    }
++
+     const payload = {
+       shift_id: shiftId,
+-      start_at: new Date().toISOString(),
+-      type: 'rest',
++      driver_id: shiftRow.driver_id,
++      state: 'break',
++      started_at: startedAt,
++      meta: { type: 'rest' },
+     };
+ 
+     if (!isOnline) {
+       console.log('[Break] Offline: queuing break start');
+-      await offlineQueue.addEvent('BREAK_START', payload);
++      await offlineQueue.addEvent('break_start', payload);
+       return { breakId: `temp-${Date.now()}` };
+     }
+ 
+-    const { data, error } = await supabase.from('break_logs').insert([payload]).select('id').single();
++    const { data, error } = await supabase.from('driver_status_events').insert([payload]).select('id').single();
+ 
+     if (error) {
+       console.error('[Break] Error starting break:', error);
+@@ -163,24 +178,49 @@ export async function endBreak(breakId: string): Promise<{ success: boolean; err
+   try {
+     const isOnline = await networkMonitor.isOnline();
+ 
++    const endedAt = new Date().toISOString();
+     const payload = {
+       id: breakId,
+-      end_at: new Date().toISOString(),
++      ended_at: endedAt,
+     };
+ 
+     if (!isOnline) {
+       console.log('[Break] Offline: queuing break end');
+-      await offlineQueue.addEvent('BREAK_END', payload);
++      await offlineQueue.addEvent('break_end', payload);
+       return { success: true };
+     }
+ 
+-    const { error } = await supabase.from('break_logs').update(payload).eq('id', breakId);
++    const { data: breakRow, error: breakFetchError } = await supabase
++      .from('driver_status_events')
++      .select('driver_id, shift_id')
++      .eq('id', breakId)
++      .maybeSingle();
++
++    if (breakFetchError) {
++      console.error('[Break] Error loading break event:', breakFetchError);
++      return { success: false, error: breakFetchError.message };
++    }
++
++    const { error } = await supabase.from('driver_status_events').update(payload).eq('id', breakId);
+ 
+     if (error) {
+       console.error('[Break] Error ending break:', error);
+       return { success: false, error: error.message };
+     }
+ 
++    if (breakRow?.driver_id) {
++      const { error: idleError } = await supabase.from('driver_status_events').insert({
++        driver_id: breakRow.driver_id,
++        shift_id: breakRow.shift_id ?? null,
++        state: 'idle',
++        started_at: endedAt,
++        meta: { source: 'break_end' },
++      });
++      if (idleError) {
++        console.error('[Break] Error inserting idle status:', idleError);
++      }
++    }
++
+     console.log('[Break] Ended break:', breakId);
+     return { success: true };
+   } catch (error) {
+@@ -196,8 +236,7 @@ export async function recordOdometerReading(
+   shiftId: string,
+   vehicleId: string,
+   reading: number,
+-  photoUri?: string,
+-  kind: 'start' | 'mid' | 'end' = 'mid'
++  photoUri?: string
+ ): Promise<{ logId: string | null; error?: string }> {
+   try {
+     const isOnline = await networkMonitor.isOnline();
+@@ -205,15 +244,14 @@ export async function recordOdometerReading(
+     const payload = {
+       shift_id: shiftId,
+       vehicle_id: vehicleId,
+-      reading,
++      odometer_value: reading,
+       photo_path: photoUri || null,
+-      kind,
+       recorded_at: new Date().toISOString(),
+     };
+ 
+     if (!isOnline) {
+       console.log('[Odometer] Offline: queuing odometer record');
+-      await offlineQueue.addEvent(kind === 'start' ? 'START_ODOMETER' : kind === 'end' ? 'END_ODOMETER' : 'ODOMETER_MID', payload);
++      await offlineQueue.addEvent('ODOMETER_READING', payload);
+       return { logId: `temp-${Date.now()}` };
+     }
+ 
+diff --git a/src/screens/ShiftHistoryScreen.tsx b/src/screens/ShiftHistoryScreen.tsx
+index eeaa86d..6d2bdcb 100644
+--- a/src/screens/ShiftHistoryScreen.tsx
++++ b/src/screens/ShiftHistoryScreen.tsx
+@@ -26,13 +26,14 @@ interface Shift {
+ 
+ export default function ShiftHistoryScreen(props: ScreenProps<'ShiftHistory'>) {
+   const { navigation } = props;
+-  const { authUserId } = useDriver();
++  const { currentDriver } = useDriver();
+   const [shifts, setShifts] = useState<Shift[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [refreshing, setRefreshing] = useState(false);
+ 
+   const loadShifts = useCallback(async () => {
+-    if (!authUserId) {
++    const driverId = currentDriver?.id ?? null;
++    if (!driverId) {
+       setLoading(false);
+       return;
+     }
+@@ -51,7 +52,7 @@ export default function ShiftHistoryScreen(props: ScreenProps<'ShiftHistory'>) {
+           end_odometer,
+           vehicles!inner(registration)
+         `)
+-        .eq('driver_id', authUserId)
++        .eq('driver_id', driverId)
+         .order('started_at', { ascending: false })
+         .limit(50);
+ 
+@@ -71,7 +72,7 @@ export default function ShiftHistoryScreen(props: ScreenProps<'ShiftHistory'>) {
+       setLoading(false);
+       setRefreshing(false);
+     }
+-  }, [authUserId]);
++  }, [currentDriver]);
+ 
+   useEffect(() => {
+     loadShifts();
+diff --git a/src/state/AppStateContext.tsx b/src/state/AppStateContext.tsx
+index 8370bd2..7dd569c 100644
+--- a/src/state/AppStateContext.tsx
++++ b/src/state/AppStateContext.tsx
+@@ -110,9 +110,15 @@ type EventQueueItem = {
+     metadata: Record<string, unknown>;
+   };
+   secondary?: {
+-    table: 'fuel_logs' | 'incidents' | 'notes';
++    table: 'fuel_logs' | 'incidents' | 'notes' | 'driver_logs';
+     payload: Record<string, unknown>;
++    attachEventId?: boolean;
+   };
++  secondaryList?: Array<{
++    table: 'fuel_logs' | 'incidents' | 'notes' | 'driver_logs';
++    payload: Record<string, unknown>;
++    attachEventId?: boolean;
++  }>;
+ };
+ 
+ type QueuedWrite = {
+@@ -467,9 +473,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+       eventId = data?.id ?? eventId;
+     }
+ 
+-    if (item.secondary) {
+-      const payload = eventId ? { ...item.secondary.payload, event_id: eventId } : item.secondary.payload;
+-      const { error } = await supabase.from(item.secondary.table).insert(payload);
++    const secondaryItems = item.secondaryList
++      ? item.secondaryList
++      : item.secondary
++        ? [{ ...item.secondary, attachEventId: item.secondary.attachEventId ?? true }]
++        : [];
++
++    for (const secondary of secondaryItems) {
++      const payload = eventId && secondary.attachEventId ? { ...secondary.payload, event_id: eventId } : secondary.payload;
++      const { error } = await supabase.from(secondary.table).insert(payload);
+       if (error) {
+         console.error('Failed to insert queued event secondary payload', {
+           eventType: item.event.event_type,
+@@ -687,6 +699,45 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+         return { status: 'error' as const, error: 'Driver profile not available.' };
+       }
+ 
++      const buildIncidentDescription = () => {
++        const title = typeof metadata.title === 'string' ? metadata.title.trim() : '';
++        const detail = typeof metadata.description === 'string' ? metadata.description.trim() : '';
++        if (title && detail) return `${title}: ${detail}`;
++        return title || detail || 'Incident reported.';
++      };
++
++      const driverLogPayload = (() => {
++        if (eventType !== 'incident' && eventType !== 'note') return null;
++        const driverName = currentDriver?.name ?? 'Unknown';
++        const vehiclePlate =
++          state.vehicleRegistration ?? state.assignedVehicle?.registration ?? null;
++        if (eventType === 'incident') {
++          const severity = typeof metadata.severity === 'string' && metadata.severity.trim()
++            ? metadata.severity.trim()
++            : 'low';
++          return {
++            driver_name: driverName,
++            vehicle_plate: vehiclePlate,
++            log_type: 'incident',
++            description: buildIncidentDescription(),
++            severity,
++            created_at: occurredAt,
++          };
++        }
++
++        const noteText = typeof metadata.note_text === 'string' && metadata.note_text.trim()
++          ? metadata.note_text.trim()
++          : 'Note submitted.';
++        return {
++          driver_name: driverName,
++          vehicle_plate: vehiclePlate,
++          log_type: 'general',
++          description: noteText,
++          severity: 'low',
++          created_at: occurredAt,
++        };
++      })();
++
+       const baseEvent = {
+         shift_id: state.activeShiftId,
+         driver_id: driverId,
+@@ -699,18 +750,27 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+         metadata,
+       };
+ 
+-      const secondaryTable =
+-        eventType === 'fuel_log' ? 'fuel_logs' : eventType === 'incident' ? 'incidents' : eventType === 'note' ? 'notes' : null;
++      const secondaryPayload = {
++        shift_id: state.activeShiftId,
++        driver_id: driverId,
++        vehicle_id: vehicleId,
++        occurred_at: occurredAt,
++        ...metadata,
++      };
+ 
+-      const secondaryPayload = secondaryTable
+-        ? {
+-            shift_id: state.activeShiftId,
+-            driver_id: driverId,
+-            vehicle_id: vehicleId,
+-            occurred_at: occurredAt,
+-            ...metadata,
+-          }
+-        : null;
++      const secondaryInserts: EventQueueItem['secondaryList'] = [];
++      if (eventType === 'fuel_log') {
++        secondaryInserts.push({ table: 'fuel_logs', payload: secondaryPayload, attachEventId: true });
++      }
++      if (eventType === 'incident') {
++        secondaryInserts.push({ table: 'incidents', payload: secondaryPayload, attachEventId: true });
++      }
++      if (eventType === 'note') {
++        secondaryInserts.push({ table: 'notes', payload: secondaryPayload, attachEventId: true });
++      }
++      if (driverLogPayload) {
++        secondaryInserts.push({ table: 'driver_logs', payload: driverLogPayload, attachEventId: false });
++      }
+ 
+       // Check network connectivity
+       const isOnline = await networkMonitor.isOnline();
+@@ -718,6 +778,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+       // If offline, queue immediately
+       if (!isOnline) {
+         if (queueOnError) {
++          const logContext = driverLogPayload
++            ? {
++                driver_name: driverLogPayload.driver_name as string,
++                vehicle_plate: driverLogPayload.vehicle_plate as string | null,
++              }
++            : undefined;
+           await offlineQueue.addEvent(eventType, {
+             shift_id: state.activeShiftId,
+             driver_id: driverId,
+@@ -726,6 +792,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+             lng: location?.coords.longitude ?? null,
+             heading: location?.coords.heading ?? null,
+             metadata,
++            logContext,
+           });
+           return { status: 'queued' as const, error: 'Device is offline' };
+         }
+@@ -734,6 +801,62 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+ 
+       await processEventQueue();
+ 
++      if (eventType === 'break_start') {
++        const { error: breakError } = await supabase.from('driver_status_events').insert({
++          driver_id: driverId,
++          shift_id: state.activeShiftId,
++          state: 'break',
++          started_at: occurredAt,
++          meta: metadata,
++        });
++        if (breakError) {
++          console.error('Failed to create break status', { message: breakError.message });
++          return { status: 'error' as const, error: breakError.message };
++        }
++      }
++
++      if (eventType === 'break_end') {
++        const baseQuery = supabase
++          .from('driver_status_events')
++          .select('id, driver_id, shift_id')
++          .eq('driver_id', driverId)
++          .eq('state', 'break')
++          .is('ended_at', null)
++          .order('started_at', { ascending: false })
++          .limit(1);
++        const { data: breakRow, error: breakFetchError } = state.activeShiftId
++          ? await baseQuery.eq('shift_id', state.activeShiftId).maybeSingle()
++          : await baseQuery.maybeSingle();
++
++        if (breakFetchError) {
++          console.error('Failed to locate break status', { message: breakFetchError.message });
++          return { status: 'error' as const, error: breakFetchError.message };
++        }
++
++        if (breakRow?.id) {
++          const { error: breakEndError } = await supabase
++            .from('driver_status_events')
++            .update({ ended_at: occurredAt })
++            .eq('id', breakRow.id);
++          if (breakEndError) {
++            console.error('Failed to end break status', { message: breakEndError.message });
++            return { status: 'error' as const, error: breakEndError.message };
++          }
++        }
++
++        const { error: idleError } = await supabase.from('driver_status_events').insert({
++          driver_id: breakRow?.driver_id ?? driverId,
++          shift_id: breakRow?.shift_id ?? state.activeShiftId,
++          state: 'idle',
++          started_at: occurredAt,
++          meta: { source: 'break_end' },
++        });
++        if (idleError) {
++          console.error('Failed to set idle status', { message: idleError.message });
++          return { status: 'error' as const, error: idleError.message };
++        }
++      }
++
+       const { data, error } = await supabase.from('events').insert(baseEvent).select('id').single();
+       if (error) {
+         console.error('Failed to create event', { eventType, shiftId: state.activeShiftId, message: error.message });
+@@ -755,34 +878,39 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+ 
+       const eventId = data?.id ?? null;
+ 
+-      if (secondaryTable && secondaryPayload) {
+-        const { error: secondaryError } = await supabase
+-          .from(secondaryTable)
+-          .insert(eventId ? { ...secondaryPayload, event_id: eventId } : secondaryPayload);
+-        if (secondaryError) {
+-          console.error('Failed to create event secondary payload', {
+-            eventType,
+-            shiftId: state.activeShiftId,
+-            message: secondaryError.message,
+-          });
++      if (secondaryInserts.length > 0) {
++        const failed: typeof secondaryInserts = [];
++        for (const insert of secondaryInserts) {
++          const payload = insert.attachEventId ? { ...insert.payload, event_id: eventId } : insert.payload;
++          const { error: secondaryError } = await supabase.from(insert.table).insert(payload);
++          if (secondaryError) {
++            console.error('Failed to create event secondary payload', {
++              eventType,
++              shiftId: state.activeShiftId,
++              message: secondaryError.message,
++            });
++            failed.push(insert);
++          }
++        }
++
++        if (failed.length > 0) {
+           if (queueOnError) {
+-            // For secondary errors, we still need to use the old queueEvent to handle the eventId
+             await queueEvent({
+               id: `${Date.now()}-${eventType}`,
+               event: baseEvent,
+               skipEventInsert: true,
+               eventId,
+-              secondary: { table: secondaryTable, payload: secondaryPayload },
++              secondaryList: failed,
+             });
+-            return { status: 'queued' as const, error: secondaryError.message };
++            return { status: 'queued' as const, error: 'Secondary inserts queued' };
+           }
+-          return { status: 'error' as const, error: secondaryError.message };
++          return { status: 'error' as const, error: 'Failed to insert secondary payloads' };
+         }
+       }
+ 
+       return { status: 'sent' as const };
+     },
+-    [processEventQueue, state.activeShiftId, state.driverRecordId, state.userId, state.vehicleId]
++    [processEventQueue, state.activeShiftId, state.assignedVehicle, state.driverRecordId, state.userId, state.vehicleId, state.vehicleRegistration, currentDriver]
+   );
+ 
+   const ensureActiveShift = useCallback(async () => {
+@@ -860,7 +988,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+           shift_id: localShiftId,
+           driver_id: queuedDriverId,
+           vehicle_id: state.vehicleId,
+-          status: 'pending',
++          status: 'active',
+         },
+       });
+       setState(prev => ({ ...prev, activeShiftId: localShiftId }));
+@@ -874,7 +1002,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
+         .insert({
+           driver_id: driverRecordId,
+           vehicle_id: state.vehicleId,
+-          status: 'pending',
++          status: 'active',
+         })
+         .select('id')
+         .single();

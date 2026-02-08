@@ -35,11 +35,10 @@ export interface Vehicle {
 export interface Shift {
   id: string;
   driver_id: string;
-  vehicle_id: string;
-  start_time: string;
-  end_time?: string;
-  notes?: string;
-  created_at: string;
+  vehicle_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  status: 'active' | 'ended' | 'cancelled';
 }
 
 export interface ShiftChecklist {
