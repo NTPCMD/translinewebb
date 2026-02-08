@@ -9,7 +9,7 @@ import { Loader, MapPin } from 'lucide-react';
 import { format, formatDistanceToNowStrict, differenceInMinutes } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { listVehicles, Vehicle } from '@/lib/db/vehicles';
-import { getOdometerPhotoUrl } from '@/lib/storage/odometerPhotos';
+import { clearOdometerPhotoCache, getOdometerPhotoUrl } from '@/lib/storage/odometerPhotos';
 
 interface DriverStatusRow {
   driver_id: string;
@@ -49,10 +49,14 @@ interface OdometerRow {
   driver_id: string;
   vehicle_id: string;
   shift_id: string | null;
-  odometer_value: number | null;
-  photo_path: string;
-  recorded_at: string;
+  reading: number | null;
+  photo_path?: string | null;
+  captured_at?: string | null;
+  created_at?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   signed_url?: string | null;
+  photo_error?: string | null;
 }
 
 interface DriverRow {
@@ -99,6 +103,17 @@ export function DriverProfilePage() {
     return map;
   }, [vehicles]);
 
+  const resolveOdometerPhoto = async (row: OdometerRow) => {
+    const { url, error } = await getOdometerPhotoUrl({
+      photoPath: row.photo_path,
+    });
+    return {
+      ...row,
+      signed_url: url,
+      photo_error: error,
+    };
+  };
+
   useEffect(() => {
     if (!driverId) return;
     const fetchBase = async () => {
@@ -110,17 +125,20 @@ export function DriverProfilePage() {
             supabase.from('view_driver_current_status').select('*').eq('driver_id', driverId).maybeSingle(),
             listVehicles(),
             supabase.from('shifts').select('*').eq('driver_id', driverId).or('status.eq.active,ended_at.is.null').order('started_at', { ascending: false }).limit(1),
-            supabase.from('odometer_logs').select('*').eq('driver_id', driverId).order('recorded_at', { ascending: false }).limit(1),
+            supabase
+              .from('odometer_readings')
+              .select('id, driver_id, vehicle_id, shift_id, reading, photo_path, captured_at, created_at, lat, lng')
+              .eq('driver_id', driverId)
+              .order('captured_at', { ascending: false })
+              .limit(1),
           ]);
         setDriver((driverResponse.data as DriverRow) ?? null);
         setStatus((statusResponse.data as DriverStatusRow) ?? null);
         setVehicles(vehicleList ?? []);
         setActiveShift((activeShiftResponse.data as ShiftRow[])?.[0] ?? null);
         const latest = (latestOdometerResponse.data as OdometerRow[])?.[0] ?? null;
-        if (latest) {
-          latest.signed_url = await getOdometerPhotoUrl(latest.photo_path);
-        }
-        setLatestOdometer(latest);
+        const resolvedLatest = latest ? await resolveOdometerPhoto(latest) : null;
+        setLatestOdometer(resolvedLatest);
         setError(null);
       } catch (err) {
         console.error(err);
@@ -196,27 +214,35 @@ export function DriverProfilePage() {
       const from = (odometerPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       const { data, error: fetchError, count } = await supabase
-        .from('odometer_logs')
-        .select('*', { count: 'exact' })
+        .from('odometer_readings')
+        .select('id, driver_id, vehicle_id, shift_id, reading, photo_path, captured_at, created_at, lat, lng', { count: 'exact' })
         .eq('driver_id', driverId)
-        .order('recorded_at', { ascending: false })
+        .order('captured_at', { ascending: false })
         .range(from, to);
       if (fetchError) {
         console.error(fetchError);
         return;
       }
       const rows = (data as OdometerRow[]) ?? [];
-      const signedRows = await Promise.all(
-        rows.map(async (row) => ({
-          ...row,
-          signed_url: await getOdometerPhotoUrl(row.photo_path),
-        }))
-      );
+      const signedRows = await Promise.all(rows.map(resolveOdometerPhoto));
       setOdometerLogs(signedRows);
       setOdometerCount(count ?? 0);
     };
     fetchOdometer();
   }, [driverId, odometerPage]);
+
+  const handleLatestPhotoRetry = async () => {
+    if (!latestOdometer) return;
+    clearOdometerPhotoCache(latestOdometer.photo_path ?? null);
+    const resolved = await resolveOdometerPhoto(latestOdometer);
+    setLatestOdometer(resolved);
+  };
+
+  const handleOdometerPhotoRetry = async (log: OdometerRow) => {
+    clearOdometerPhotoCache(log.photo_path ?? null);
+    const resolved = await resolveOdometerPhoto(log);
+    setOdometerLogs((prev) => prev.map((row) => (row.id === log.id ? resolved : row)));
+  };
 
   useEffect(() => {
     if (!driverId) return;
@@ -384,11 +410,37 @@ export function DriverProfilePage() {
                 <div className="text-sm text-gray-300">
                   <p>
                     <span className="text-gray-500">Latest odometer:</span>{' '}
-                    {latestOdometer?.odometer_value ?? '—'}
+                    {latestOdometer?.reading ?? '—'}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Captured:</span>{' '}
+                    {latestOdometer?.captured_at || latestOdometer?.created_at
+                      ? format(new Date(latestOdometer.captured_at ?? latestOdometer.created_at ?? ''), 'MMM dd, HH:mm')
+                      : '—'}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Location:</span>{' '}
+                    {latestOdometer?.lat != null && latestOdometer?.lng != null
+                      ? `${latestOdometer.lat.toFixed(5)}, ${latestOdometer.lng.toFixed(5)}`
+                      : '—'}
                   </p>
                 </div>
-                {latestOdometer?.signed_url && (
+                {latestOdometer?.signed_url ? (
                   <img src={latestOdometer.signed_url} alt="Latest odometer" className="w-full rounded-lg" />
+                ) : latestOdometer?.photo_error ? (
+                  <div className="flex items-center justify-between rounded border border-red-900 bg-red-950/40 p-2 text-sm text-red-300">
+                    <span>Photo failed to load.</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-300 hover:text-red-200"
+                      onClick={handleLatestPhotoRetry}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No photo.</p>
                 )}
               </CardContent>
             </Card>
@@ -554,13 +606,14 @@ export function DriverProfilePage() {
                     <TableHead className="text-gray-400">Recorded</TableHead>
                     <TableHead className="text-gray-400">Vehicle</TableHead>
                     <TableHead className="text-gray-400">Odometer</TableHead>
+                    <TableHead className="text-gray-400">Location</TableHead>
                     <TableHead className="text-gray-400">Photo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {odometerLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                      <TableCell colSpan={5} className="text-center py-6 text-gray-500">
                         No odometer logs found.
                       </TableCell>
                     </TableRow>
@@ -570,15 +623,34 @@ export function DriverProfilePage() {
                       return (
                         <TableRow key={log.id} className="border-gray-800">
                           <TableCell className="text-gray-300">
-                            {format(new Date(log.recorded_at), 'MMM dd, HH:mm')}
+                            {log.captured_at || log.created_at
+                              ? format(new Date(log.captured_at ?? log.created_at ?? ''), 'MMM dd, HH:mm')
+                              : '—'}
                           </TableCell>
                           <TableCell className="text-gray-300">
                             {vehicle ? `${vehicle.plate_number} • ${vehicle.make}` : log.vehicle_id}
                           </TableCell>
-                          <TableCell className="text-gray-300">{log.odometer_value ?? '—'}</TableCell>
+                          <TableCell className="text-gray-300">{log.reading ?? '—'}</TableCell>
+                          <TableCell className="text-gray-300">
+                            {log.lat != null && log.lng != null
+                              ? `${log.lat.toFixed(5)}, ${log.lng.toFixed(5)}`
+                              : '—'}
+                          </TableCell>
                           <TableCell className="text-gray-300">
                             {log.signed_url ? (
                               <img src={log.signed_url} alt="Odometer" className="h-12 w-20 rounded border border-gray-700 object-cover" />
+                            ) : log.photo_error ? (
+                              <div className="flex items-center gap-2 text-sm text-red-300">
+                                <span>Photo failed</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-300 hover:text-red-200"
+                                  onClick={() => handleOdometerPhotoRetry(log)}
+                                >
+                                  Retry
+                                </Button>
+                              </div>
                             ) : (
                               'No photo'
                             )}

@@ -48,11 +48,13 @@ export function LogsPage() {
     fetchLogs();
   }, []);
 
+  const normalizedQuery = searchQuery.toLowerCase();
+
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
-      log.driver_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.vehicle_plate?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      (log.driver_name ?? '').toLowerCase().includes(normalizedQuery) ||
+      (log.vehicle_plate ?? '').toLowerCase().includes(normalizedQuery) ||
+      (log.description ?? '').toLowerCase().includes(normalizedQuery);
 
     const matchesType = filterType === 'all' || log.log_type === filterType;
 
@@ -116,7 +118,7 @@ export function LogsPage() {
           <CardContent className="p-6">
             <p className="text-sm text-gray-400 mb-1">Incidents</p>
             <p className="text-3xl font-bold text-orange-400">
-              {logs.filter((l) => l.logType === 'incident').length}
+              {logs.filter((l) => l.log_type === 'incident').length}
             </p>
           </CardContent>
         </Card>
@@ -124,7 +126,7 @@ export function LogsPage() {
           <CardContent className="p-6">
             <p className="text-sm text-gray-400 mb-1">Maintenance Issues</p>
             <p className="text-3xl font-bold text-yellow-400">
-              {logs.filter((l) => l.logType === 'maintenance_issue').length}
+              {logs.filter((l) => l.log_type === 'maintenance_issue').length}
             </p>
           </CardContent>
         </Card>
@@ -132,7 +134,7 @@ export function LogsPage() {
           <CardContent className="p-6">
             <p className="text-sm text-gray-400 mb-1">Accidents</p>
             <p className="text-3xl font-bold text-red-400">
-              {logs.filter((l) => l.logType === 'accident').length}
+              {logs.filter((l) => l.log_type === 'accident').length}
             </p>
           </CardContent>
         </Card>
@@ -250,7 +252,7 @@ export function LogsPage() {
                         {log.description}
                       </TableCell>
                       <TableCell className="text-gray-300">
-                        {format(new Date(log.created_at), 'MMM dd, HH:mm')}
+                        {log.created_at ? format(new Date(log.created_at), 'MMM dd, HH:mm') : '—'}
                       </TableCell>
                       <TableCell>
                         <Badge className={getSeverityBadge(log.severity)}>
