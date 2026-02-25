@@ -46,10 +46,11 @@ export function ShiftsPage() {
     fetchData();
   }, []);
 
+  const normalizedQuery = searchQuery.toLowerCase();
   const filteredShifts = shifts.filter((shift) => {
     const matchesSearch =
-      shift.driver_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      shift.vehicle_plate.toLowerCase().includes(searchQuery.toLowerCase());
+      (shift.driver_name ?? '').toLowerCase().includes(normalizedQuery) ||
+      (shift.vehicle_plate ?? '').toLowerCase().includes(normalizedQuery);
 
     const matchesStatus = filterStatus === 'all' || shift.status === filterStatus;
 
