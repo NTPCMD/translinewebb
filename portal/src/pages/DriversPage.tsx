@@ -13,8 +13,6 @@ import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
 import { listVehicles, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
 import { fetchDriversFull, fetchDriversFullCount, isDriverRow } from '@/lib/drivers';
-import { createClient } from '@supabase/supabase-js';
-import { getEnv } from '@/lib/env';
 import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -60,8 +58,6 @@ export function DriversPage() {
   const [editVehicleId, setEditVehicleId] = useState('');
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDriver, setPasswordDriver] = useState<Driver | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
   const findVehicleForDriver = (driver: Driver) =>
     vehicles.find(
@@ -69,11 +65,6 @@ export function DriversPage() {
         vehicle.assigned_driver_id === driver.driver_id ||
         vehicle.assigned_driver_id === driver.auth_user_id
     );
-  const adminClient = useMemo(() => {
-    const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) return null;
-    return createClient(getEnv('VITE_SUPABASE_URL'), serviceRoleKey);
-  }, []);
   const resolveDriverId = (driver: any) =>
     driver.driver_id ?? driver.id ?? driver.auth_user_id;
   const vehicleMap = useMemo(() => {
@@ -171,24 +162,25 @@ export function DriversPage() {
       return;
     }
     try {
-      const insertPayload = {
-        email: formData.email,
-        password: '********',
-        metadata: { full_name: formData.name, phone: formData.phone, status: 'active' },
-        org_id: undefined,
-        company_id: undefined,
-        restaurant_id: undefined,
-      };
-      console.info('DriversPage: insert=auth.users via supabase.auth.signUp payload=', insertPayload);
-      // Register driver in Supabase Auth (creates profile)
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: { data: { full_name: formData.name, phone: formData.phone, status: 'active' } },
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        setError('Not authenticated. Please log in again.');
+        return;
+      }
+      console.info('DriversPage: POST /admin/create-driver email=', formData.email);
+      const response = await fetch('/admin/create-driver', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ email: formData.email, password: formData.password, name: formData.name, phone: formData.phone }),
       });
-      if (signUpError) {
-        console.warn('DriversPage: signUp error=', signUpError);
-        setError(signUpError.message);
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        console.warn('DriversPage: /admin/create-driver error=', errBody);
+        setError(errBody?.error || 'Failed to create driver');
         return;
       }
       // Refetch drivers list from drivers_full
@@ -254,49 +246,19 @@ export function DriversPage() {
 
   const handlePasswordReset = async () => {
     if (!passwordDriver) return;
-    if (!newPassword || !confirmPassword) {
-      setError('Please enter and confirm the new password.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    const authUserId = passwordDriver.auth_user_id;
     const email = passwordDriver.profile_email ?? passwordDriver.email;
-    if (!authUserId && !email) {
-      setError('Selected driver is missing auth user details.');
+    if (!email) {
+      setError('Selected driver is missing an email address.');
       return;
     }
     try {
       setPasswordSaving(true);
-      if (!adminClient) {
-        if (!email) {
-          setError('Driver email is required to send a reset link.');
-          return;
-        }
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
-        if (resetError) throw resetError;
-        setError('Service role key missing. Sent a reset link to the driver instead.');
-        setPasswordDialogOpen(false);
-        setNewPassword('');
-        setConfirmPassword('');
-        return;
-      }
-      if (!authUserId) {
-        setError('Driver auth user id is required to set a password.');
-        return;
-      }
-      const { error: updateError } = await adminClient.auth.admin.updateUserById(authUserId, {
-        password: newPassword,
-      });
-      if (updateError) throw updateError;
-      setPasswordDialogOpen(false);
-      setNewPassword('');
-      setConfirmPassword('');
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+      if (resetError) throw resetError;
       setError(null);
+      setPasswordDialogOpen(false);
     } catch (err: any) {
-      setError(err?.message ? `Failed to set password: ${err.message}` : 'Failed to set password.');
+      setError(err?.message ? `Failed to send reset link: ${err.message}` : 'Failed to send reset link.');
     } finally {
       setPasswordSaving(false);
     }
@@ -499,8 +461,6 @@ export function DriversPage() {
                                   className="text-gray-400 hover:text-[#FF6B35] h-8 w-8 p-0"
                                   onClick={() => {
                                     setPasswordDriver(driver);
-                                    setNewPassword('');
-                                    setConfirmPassword('');
                                     setPasswordDialogOpen(true);
                                   }}
                                 >
@@ -591,9 +551,7 @@ export function DriversPage() {
           <DialogHeader>
             <DialogTitle className="text-white">Set Driver Password</DialogTitle>
             <DialogDescription className="text-gray-400">
-              {adminClient
-                ? 'Set a new password for the selected driver.'
-                : 'Set the VITE_SUPABASE_SERVICE_ROLE_KEY to update passwords directly. Otherwise, a reset link will be emailed.'}
+              A password reset link will be emailed to the selected driver.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -603,32 +561,12 @@ export function DriversPage() {
                 {passwordDriver?.full_name ?? passwordDriver?.profile_email ?? passwordDriver?.email ?? 'Selected driver'}
               </div>
             </div>
-            <div>
-              <Label className="text-gray-300">New Password</Label>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password"
-                className="bg-[#0F0F0F] border-gray-700 text-white"
-              />
-            </div>
-            <div>
-              <Label className="text-gray-300">Confirm Password</Label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                className="bg-[#0F0F0F] border-gray-700 text-white"
-              />
-            </div>
             <Button
               onClick={handlePasswordReset}
               className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
               disabled={passwordSaving}
             >
-              {passwordSaving ? 'Saving...' : adminClient ? 'Set Password' : 'Send Reset Link'}
+              {passwordSaving ? 'Sending...' : 'Send Reset Link'}
             </Button>
           </div>
         </DialogContent>
