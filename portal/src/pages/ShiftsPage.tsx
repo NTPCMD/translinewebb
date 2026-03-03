@@ -1,5 +1,5 @@
 // Shifts management page
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -23,30 +23,66 @@ export function ShiftsPage() {
   const [endShiftDialog, setEndShiftDialog] = useState(false);
   const [endShiftReason, setEndShiftReason] = useState('');
 
+  const fetchShifts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [shiftsList, active, today] = await Promise.all([
+        listShifts(),
+        countActiveShifts(),
+        countTodayShifts(),
+      ]);
+      setShifts(shiftsList);
+      setActiveCount(active);
+      setTodayCount(today);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load shifts');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Fetch shifts on mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [shiftsList, active, today] = await Promise.all([
-          listShifts(),
-          countActiveShifts(),
-          countTodayShifts(),
-        ]);
-        setShifts(shiftsList);
-        setActiveCount(active);
-        setTodayCount(today);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load shifts');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchShifts();
+  }, [fetchShifts]);
 
-    fetchData();
-  }, []);
+  // Realtime subscription: re-fetch when any shift row changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('shifts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shifts' },
+        () => {
+          fetchShifts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchShifts]);
+
+  // Realtime subscription: re-fetch when a shift_events row is inserted
+  useEffect(() => {
+    const channel = supabase
+      .channel('shift-events')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'shift_events' },
+        () => {
+          fetchShifts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchShifts]);
 
   const normalizedQuery = searchQuery.toLowerCase();
   const filteredShifts = shifts.filter((shift) => {
