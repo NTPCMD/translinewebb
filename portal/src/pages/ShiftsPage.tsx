@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, Plus, Eye, CheckCircle, XCircle, Clock, Loader } from 'lucide-react';
 import { format } from 'date-fns';
-import { listShifts, listActiveShifts, endShift, Shift, countActiveShifts, countTodayShifts } from '@/lib/db/shifts';
+import { listShifts, listActiveShifts, Shift, countActiveShifts, countTodayShifts } from '@/lib/db/shifts';
+import { supabase } from '@/lib/supabase';
 
 export function ShiftsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +21,7 @@ export function ShiftsPage() {
   const [todayCount, setTodayCount] = useState(0);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [endShiftDialog, setEndShiftDialog] = useState(false);
+  const [endShiftReason, setEndShiftReason] = useState('');
 
   // Fetch shifts on mount
   useEffect(() => {
@@ -61,22 +63,32 @@ export function ShiftsPage() {
     if (!selectedShift) return;
 
     try {
-      await endShift(selectedShift.id);
+      const { error } = await supabase.rpc('force_end_shift', {
+        p_shift_id: selectedShift.id,
+        p_reason: endShiftReason || 'Ended by admin',
+      });
+      if (error) throw error;
       setShifts(
         shifts.map((s) =>
           s.id === selectedShift.id
-            ? { ...s, status: 'completed', endTime: new Date().toISOString() }
+            ? { ...s, status: 'ended', ended_at: new Date().toISOString() }
             : s
         )
       );
       setActiveCount(Math.max(0, activeCount - 1));
       setEndShiftDialog(false);
       setSelectedShift(null);
+      setEndShiftReason('');
       setError(null);
     } catch (err) {
       setError('Failed to end shift');
       console.error(err);
     }
+  };
+
+  const handleEndShiftDialogChange = (open: boolean) => {
+    setEndShiftDialog(open);
+    if (!open) setEndShiftReason('');
   };
 
   return (
@@ -259,7 +271,7 @@ export function ShiftsPage() {
       </Card>
 
       {/* End Shift Confirmation Dialog */}
-      <AlertDialog open={endShiftDialog} onOpenChange={setEndShiftDialog}>
+      <AlertDialog open={endShiftDialog} onOpenChange={handleEndShiftDialogChange}>
         <AlertDialogContent className="bg-[#161616] border-gray-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">End Shift</AlertDialogTitle>
@@ -267,6 +279,14 @@ export function ShiftsPage() {
               Are you sure you want to end the shift for {selectedShift?.driver_name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-2">
+            <Input
+              value={endShiftReason}
+              onChange={(e) => setEndShiftReason(e.target.value)}
+              placeholder="Reason (optional)"
+              className="bg-[#0F0F0F] border-gray-700 text-white placeholder:text-gray-500"
+            />
+          </div>
           <div className="flex gap-4">
             <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">
               Cancel

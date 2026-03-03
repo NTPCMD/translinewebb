@@ -81,5 +81,19 @@ export async function createDriver(req, res) {
     return res.status(500).json({ error: insertError.message || 'Failed to insert driver record' });
   }
 
+  // Log the admin action in the audit log (best-effort, non-blocking)
+  serviceRoleClient.from('admin_audit_logs').insert({
+    admin_id: requesterId,
+    action: 'create_driver',
+    target_type: 'driver',
+    target_id: newUserId,
+    metadata: {
+      email,
+      full_name: name,
+    },
+  }).then(({ error: auditError }) => {
+    if (auditError) console.warn('createDriver: audit log insert failed=', auditError);
+  });
+
   return res.status(201).json({ driver: driverRecord });
 }
