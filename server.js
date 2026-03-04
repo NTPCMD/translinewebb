@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { createDriver } from './server/admin/createDriver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +12,9 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
+
+// Admin API routes
+app.post('/admin/create-driver', createDriver);
 
 // IMPORTANT: Portal MUST come BEFORE main site static files and catch-alls
 
