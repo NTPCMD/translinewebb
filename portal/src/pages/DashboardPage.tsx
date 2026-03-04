@@ -1,15 +1,53 @@
 // Main dashboard page with real data from Supabase
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { Users, Truck, Calendar, Wrench, AlertCircle, TrendingUp, Loader } from 'lucide-react';
+import { Users, Truck, Calendar, Wrench, AlertCircle, TrendingUp, Loader, Activity, ShieldAlert, ClipboardList } from 'lucide-react';
 import { getDashboardStats, DashboardStats, listActivityLogs, ActivityLog } from '@/lib/db/dashboard';
+import { supabase } from '@/lib/supabase';
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeShiftCount, setActiveShiftCount] = useState(0);
+  const [forceEndedToday, setForceEndedToday] = useState(0);
+  const [adminActionsToday, setAdminActionsToday] = useState(0);
+
+  const fetchActiveShiftCount = useCallback(async () => {
+    const { count, error: err } = await supabase
+      .from('shifts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active');
+    if (err) { console.error('fetchActiveShiftCount:', err); return; }
+    setActiveShiftCount(count || 0);
+  }, []);
+
+  const fetchForceEndedToday = useCallback(async () => {
+    const { count, error: err } = await supabase
+      .from('shifts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'force_ended')
+      .gte('ended_at', startOfToday().toISOString());
+    if (err) { console.error('fetchForceEndedToday:', err); return; }
+    setForceEndedToday(count || 0);
+  }, []);
+
+  const fetchAdminActionsToday = useCallback(async () => {
+    const { count, error: err } = await supabase
+      .from('admin_audit_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfToday().toISOString());
+    if (err) { console.error('fetchAdminActionsToday:', err); return; }
+    setAdminActionsToday(count || 0);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,12 +68,41 @@ export function DashboardPage() {
     };
 
     fetchData();
+    fetchActiveShiftCount();
+    fetchForceEndedToday();
+    fetchAdminActionsToday();
 
     // Refresh stats every 30 seconds
     const interval = setInterval(fetchData, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchActiveShiftCount, fetchForceEndedToday, fetchAdminActionsToday]);
+
+  // Realtime subscription: auto-update monitor stats when shifts or audit logs change
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-monitor')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shifts' },
+        () => {
+          fetchActiveShiftCount();
+          fetchForceEndedToday();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'admin_audit_logs' },
+        () => {
+          fetchAdminActionsToday();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchActiveShiftCount, fetchForceEndedToday, fetchAdminActionsToday]);
 
   if (loading) {
     return (
@@ -130,6 +197,49 @@ export function DashboardPage() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Live Monitor Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-[#161616] border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-400 mb-1">Active Shifts Now</p>
+                <p className="text-3xl font-bold text-green-400">{activeShiftCount}</p>
+              </div>
+              <div className="bg-green-700 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#161616] border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-400 mb-1">Force-Ended Today</p>
+                <p className="text-3xl font-bold text-red-400">{forceEndedToday}</p>
+              </div>
+              <div className="bg-red-700 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+                <ShieldAlert className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#161616] border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-400 mb-1">Admin Actions Today</p>
+                <p className="text-3xl font-bold text-blue-400">{adminActionsToday}</p>
+              </div>
+              <div className="bg-blue-700 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+                <ClipboardList className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Activity Feed */}
