@@ -160,7 +160,7 @@ Create test user in Supabase:
 
 Required in `.env.local`:
 ```
-VITE_SUPABASE_URL=https://wgrbyrqsoyjphapkxogu.supabase.co
+VITE_SUPABASE_URL=https://fjllbnhcyugxltiresjp.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 

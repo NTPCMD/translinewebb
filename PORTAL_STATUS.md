@@ -129,7 +129,7 @@ portal/
 
 Portal connects to Supabase Functions:
 ```
-Base: https://wgrbyrqsoyjphapkxogu.supabase.co/functions/v1/make-server-987e9da2
+Base: https://fjllbnhcyugxltiresjp.supabase.co/functions/v1/make-server-987e9da2
 ```
 
 Endpoints:

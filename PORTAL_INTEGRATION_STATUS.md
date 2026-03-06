@@ -84,9 +84,11 @@ portal/src/pages/DriversPage.tsx       ← Imports updated (logic next)
 
 **Already set in `.env.local`:**
 ```
-VITE_SUPABASE_URL=https://wgrbyrqsoyjphapkxogu.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndncmJ5cnFzb3lqcGhhcGt4b2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODE3MDQsImV4cCI6MjA4MzM1NzcwNH0.nrpEL4wqUwUjV5J87I99iNoh2cqxevzVesBXyt8VgVA
+VITE_SUPABASE_URL=https://fjllbnhcyugxltiresjp.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqbGxibmhjeXVneGx0aXJlc2pwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5ODAyNzMsImV4cCI6MjA4NzU1NjI3M30.alLINSopMh0fhu-Ae0kUbczNXdTVlk-JtWMMEpgjeuI
 ```
+
+> **Security note:** The service role key must **never** be stored in a `VITE_*` variable or in `portal/.env.local`. It must be kept server-side only (e.g., in a backend `.env` or secrets manager) and must not be committed to source control. See `portal/.env.local.example` for a safe template.
 
 **Create test user in Supabase:**
 - Email: `admin@test.com`

@@ -71,7 +71,7 @@ All colors are CSS variables in `src/index.css` and can be customized.
 The portal connects to Supabase Functions API:
 
 ```
-Base URL: https://wgrbyrqsoyjphapkxogu.supabase.co/functions/v1/make-server-987e9da2
+Base URL: https://fjllbnhcyugxltiresjp.supabase.co/functions/v1/make-server-987e9da2
 ```
 
 Endpoints used:
@@ -142,7 +142,7 @@ The portal uses Tailwind CSS utility classes:
 ## 🔐 Authentication
 
 The portal uses Supabase Auth with:
-- Supabase Project ID: `wgrbyrqsoyjphapkxogu`
+- Supabase Project ID: `fjllbnhcyugxltiresjp`
 - Public Anon Key: Stored in `src/utils/supabase/info.tsx`
 
 ProtectedRoute component available in `components/ProtectedRoute.tsx`
