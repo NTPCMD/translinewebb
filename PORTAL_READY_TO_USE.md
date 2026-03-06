@@ -126,11 +126,13 @@ Dark Theme CSS
 ## Environment Variables
 
 ```
-VITE_SUPABASE_URL=https://wgrbyrqsoyjphapkxogu.supabase.co
+VITE_SUPABASE_URL=https://fjllbnhcyugxltiresjp.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGc...
 ```
 
 (Already configured in `.env.local`)
+
+> **Security note:** The service role key must **never** be stored in a `VITE_*` variable or committed. Store it server-side only. See `portal/.env.local.example` for a safe template.
 
 ## Support
 

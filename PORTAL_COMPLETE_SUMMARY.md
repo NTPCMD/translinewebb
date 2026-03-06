@@ -156,7 +156,7 @@ Upload `dist/portal/` contents to your server at `/portal/` path.
 
 Portal connects to Supabase Functions at:
 ```
-https://wgrbyrqsoyjphapkxogu.supabase.co/functions/v1/make-server-987e9da2
+https://fjllbnhcyugxltiresjp.supabase.co/functions/v1/make-server-987e9da2
 ```
 
 Already implemented in:
