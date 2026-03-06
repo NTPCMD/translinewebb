@@ -168,8 +168,8 @@ export function DriversPage() {
         setError('Not authenticated. Please log in again.');
         return;
       }
-      console.info('DriversPage: POST /admin/create-driver email=', formData.email);
-      const response = await fetch('/admin/create-driver', {
+      console.info('DriversPage: POST /api/admin/create-driver email=', formData.email);
+      const response = await fetch('/api/admin/create-driver', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ export function DriversPage() {
       });
       if (!response.ok) {
         const errBody = await response.json().catch(() => ({}));
-        console.warn('DriversPage: /admin/create-driver error=', errBody);
+        console.warn('DriversPage: /api/admin/create-driver error=', errBody);
         setError(errBody?.error || 'Failed to create driver');
         return;
       }
