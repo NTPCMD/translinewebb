@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+
+const supabaseClient = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
 )
 
 export default async function handler(req, res) {
@@ -17,8 +22,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Missing token' })
   }
 
+  // verify user
   const { data: userData, error: userError } =
-    await supabase.auth.getUser(token)
+    await supabaseClient.auth.getUser(token)
 
   if (userError || !userData?.user) {
     return res.status(401).json({ error: 'Invalid user' })
@@ -26,20 +32,22 @@ export default async function handler(req, res) {
 
   const requesterId = userData.user.id
 
-  const { data: profile } = await supabase
+  // check admin role
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('role')
     .eq('id', requesterId)
     .single()
 
-  if (profile?.role !== 'admin') {
+  if (!profile || profile.role !== 'admin') {
     return res.status(403).json({ error: 'Not admin' })
   }
 
   const { email, password, name } = req.body
 
+  // create auth user
   const { data: newUser, error: createError } =
-    await supabase.auth.admin.createUser({
+    await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true
@@ -51,25 +59,18 @@ export default async function handler(req, res) {
 
   const newUserId = newUser.user.id
 
-  const { error: driverError } = await supabase
-    .from('drivers')
-    .insert({
-      user_id: newUserId,
-      status: 'active'
-    })
+  // create driver profile
+  await supabaseAdmin.from('profiles').insert({
+    id: newUserId,
+    full_name: name,
+    role: 'driver'
+  })
 
-  if (driverError) {
-    return res.status(400).json(driverError)
-  }
-
-  await supabase
-    .from('profiles')
-    .insert({
-      id: newUserId,
-      full_name: name,
-      role: 'driver'
-    })
+  // create driver row
+  await supabaseAdmin.from('drivers').insert({
+    user_id: newUserId,
+    status: 'active'
+  })
 
   return res.status(200).json({ success: true })
 }
-
