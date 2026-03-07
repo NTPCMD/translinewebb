@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+console.log("ENV CHECK", process.env.SUPABASE_URL)
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
