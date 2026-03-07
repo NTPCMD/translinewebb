@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-console.log("ENV CHECK", process.env.SUPABASE_URL)
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
@@ -12,30 +11,26 @@ const supabaseClient = createClient(
 )
 
 export default async function handler(req, res) {
-
   try {
-
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
     }
 
     const token = req.headers.authorization?.replace('Bearer ', '')
-
     if (!token) {
       return res.status(401).json({ error: 'Missing auth token' })
     }
 
-    // validate user
+    // Validate caller
     const { data: userData, error: userError } =
       await supabaseClient.auth.getUser(token)
-
     if (userError || !userData?.user) {
-      return res.status(401).json({ error: 'Invalid user' })
+      return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
     const requesterId = userData.user.id
 
-    // check admin role
+    // Check admin role
     const { data: profile, error: profileError } =
       await supabaseAdmin
         .from('profiles')
@@ -44,75 +39,117 @@ export default async function handler(req, res) {
         .single()
 
     if (profileError) {
-      console.error(profileError)
-      return res.status(500).json(profileError)
+      console.error('Admin profile lookup failed:', profileError.message)
+      return res.status(500).json({ error: 'Failed to verify admin role' })
     }
 
     if (!profile || profile.role !== 'admin') {
       return res.status(403).json({ error: 'Not admin' })
     }
 
-    const { email, password, name } = req.body
-
+    // Validate body
+    const { email, password, name, phone } = req.body
     if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Missing fields' })
+      return res.status(400).json({ error: 'Missing required fields: email, password, name' })
     }
 
-    // create auth user
-    const { data: newUser, error: authError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true
-      })
+    // Check if auth user already exists — reuse if so
+    let userId
 
-    if (authError) {
-      console.error(authError)
-      return res.status(500).json(authError)
+    const { data: existingUsers, error: listError } =
+      await supabaseAdmin.auth.admin.listUsers()
+
+    if (listError) {
+      console.error('Failed to list users:', listError.message)
+      return res.status(500).json({ error: 'Failed to check existing users' })
     }
 
-    const userId = newUser.user.id
+    const existingUser = existingUsers?.users?.find(u => u.email === email)
 
-    // create profile
+    if (existingUser) {
+      console.log('Reusing existing auth user:', existingUser.id)
+      userId = existingUser.id
+
+      // Update password and phone in case they changed
+      const { error: updateError } =
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          password,
+          ...(phone && { phone })
+        })
+
+      if (updateError) {
+        console.error('Failed to update existing user:', updateError.message)
+        return res.status(500).json({ error: 'Failed to update existing auth user', details: updateError.message })
+      }
+
+    } else {
+      // Create new auth user
+      const { data: newUser, error: authError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          ...(phone && { phone })
+        })
+
+      if (authError) {
+        console.error('Auth user creation failed:', authError.message)
+        return res.status(500).json({ error: 'Failed to create auth user', details: authError.message })
+      }
+
+      userId = newUser.user.id
+    }
+
+    // Upsert profile
     const { error: profileInsertError } =
       await supabaseAdmin
         .from('profiles')
-        .insert({
+        .upsert({
           id: userId,
           full_name: name,
-          role: 'driver'
-        })
+          role: 'driver',
+          ...(phone && { phone })
+        }, { onConflict: 'id' })
 
     if (profileInsertError) {
-      console.error(profileInsertError)
-      return res.status(500).json(profileInsertError)
+      console.error('Profile upsert failed:', profileInsertError.message)
+      return res.status(500).json({ error: 'Failed to create driver profile', details: profileInsertError.message })
     }
 
-    // create driver
+    // Upsert driver row
     const { error: driverError } =
       await supabaseAdmin
         .from('drivers')
-        .insert({
+        .upsert({
           user_id: userId,
           status: 'active'
-        })
+        }, { onConflict: 'user_id' })
 
     if (driverError) {
-      console.error(driverError)
-      return res.status(500).json(driverError)
+      console.error('Driver row upsert failed:', driverError.message)
+      return res.status(500).json({ error: 'Failed to create driver record', details: driverError.message })
     }
 
-    return res.status(200).json({ success: true })
+    // Audit log (non-blocking)
+    supabaseAdmin
+      .from('admin_audit_logs')
+      .insert({
+        admin_id: requesterId,
+        action: 'create_driver',
+        target_user_id: userId,
+        details: { email, name, ...(phone && { phone }) }
+      })
+      .then(({ error }) => {
+        if (error) console.warn('Audit log failed (non-blocking):', error.message)
+      })
+
+    return res.status(200).json({ success: true, userId })
 
   } catch (err) {
-
-    console.error('CREATE DRIVER CRASH', err)
-
+    console.error('CREATE DRIVER CRASH:', err)
     return res.status(500).json({
-      error: 'Server crash',
+      error: 'Unexpected server error',
       details: err.message
     })
-
   }
-
 }
