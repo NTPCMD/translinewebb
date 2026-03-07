@@ -410,7 +410,7 @@ export function DriversPage() {
                             <TableCell className="text-gray-300">
                               {vehicle ? (
                                 <span>
-                                  {vehicle.plate_number} • {vehicle.make} {vehicle.model}
+                                  {vehicle.rego} • {vehicle.make} {vehicle.model}
                                 </span>
                               ) : (
                                 <span className="text-gray-500">Unassigned</span>
