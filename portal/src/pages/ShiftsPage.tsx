@@ -261,11 +261,10 @@ export function ShiftsPage() {
                             {format(new Date(shift.started_at), 'MMM dd, HH:mm')}
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-300">
-                          {shift.ended_at ? format(new Date(shift.ended_at), 'MMM dd, HH:mm') : (
-                          ) : (
-                            <span className="text-yellow-400">In progress</span>
-                          )}
+                        {shift.ended_at ? format(new Date(shift.ended_at), 'MMM dd, HH:mm') : (
+          ) : (
+            <span className="text-yellow-400">In progress</span>
+          )}
                         </TableCell>
                         <TableCell>
                           <Badge
