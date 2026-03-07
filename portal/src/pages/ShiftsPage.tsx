@@ -254,16 +254,15 @@ export function ShiftsPage() {
                     filteredShifts.map((shift) => (
                       <TableRow key={shift.id} className="border-gray-800">
                         <TableCell className="font-medium text-white">{shift.driver_name}</TableCell>
-                        <TableCell className="text-gray-300">{shift.vehicle_plate}</TableCell>
+                        <TableCell className="text-gray-300">{shift.vehicle_rego}</TableCell>
                         <TableCell className="text-gray-300">
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4 text-gray-500" />
-                            {format(new Date(shift.startTime), 'MMM dd, HH:mm')}
+                            {format(new Date(shift.started_at), 'MMM dd, HH:mm')}
                           </div>
                         </TableCell>
                         <TableCell className="text-gray-300">
-                          {shift.endTime ? (
-                            format(new Date(shift.endTime), 'MMM dd, HH:mm')
+                          {shift.ended_at ? format(new Date(shift.ended_at), 'MMM dd, HH:mm') : (
                           ) : (
                             <span className="text-yellow-400">In progress</span>
                           )}
