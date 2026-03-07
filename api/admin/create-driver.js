@@ -21,15 +21,15 @@ export default async function handler(req, res) {
     const token = req.headers.authorization?.replace('Bearer ', '')
 
     if (!token) {
-      return res.status(401).json({ error: 'Missing token' })
+      return res.status(401).json({ error: 'Missing auth token' })
     }
 
-    // verify logged in user
+    // validate user
     const { data: userData, error: userError } =
       await supabaseClient.auth.getUser(token)
 
     if (userError || !userData?.user) {
-      return res.status(401).json({ error: 'Invalid user', details: userError })
+      return res.status(401).json({ error: 'Invalid user' })
     }
 
     const requesterId = userData.user.id
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         .single()
 
     if (profileError) {
-      console.error('PROFILE ERROR', profileError)
+      console.error(profileError)
       return res.status(500).json(profileError)
     }
 
@@ -58,47 +58,47 @@ export default async function handler(req, res) {
     }
 
     // create auth user
-    const { data: newUser, error: createError } =
+    const { data: newUser, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true
       })
 
-    if (createError) {
-      console.error('AUTH CREATE ERROR', createError)
-      return res.status(400).json(createError)
+    if (authError) {
+      console.error(authError)
+      return res.status(500).json(authError)
     }
 
-    const newUserId = newUser.user.id
+    const userId = newUser.user.id
 
-    // insert profile
+    // create profile
     const { error: profileInsertError } =
       await supabaseAdmin
         .from('profiles')
         .insert({
-          id: newUserId,
+          id: userId,
           full_name: name,
           role: 'driver'
         })
 
     if (profileInsertError) {
-      console.error('PROFILE INSERT ERROR', profileInsertError)
+      console.error(profileInsertError)
       return res.status(500).json(profileInsertError)
     }
 
-    // insert driver
-    const { error: driverInsertError } =
+    // create driver
+    const { error: driverError } =
       await supabaseAdmin
         .from('drivers')
         .insert({
-          user_id: newUserId,
+          user_id: userId,
           status: 'active'
         })
 
-    if (driverInsertError) {
-      console.error('DRIVER INSERT ERROR', driverInsertError)
-      return res.status(500).json(driverInsertError)
+    if (driverError) {
+      console.error(driverError)
+      return res.status(500).json(driverError)
     }
 
     return res.status(200).json({ success: true })
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
     console.error('CREATE DRIVER CRASH', err)
 
     return res.status(500).json({
-      error: 'Server error',
+      error: 'Server crash',
       details: err.message
     })
 
