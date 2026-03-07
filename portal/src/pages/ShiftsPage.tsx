@@ -88,7 +88,7 @@ export function ShiftsPage() {
   const filteredShifts = shifts.filter((shift) => {
     const matchesSearch =
       (shift.driver_name ?? '').toLowerCase().includes(normalizedQuery) ||
-      (shift.vehicle_plate ?? '').toLowerCase().includes(normalizedQuery);
+      (shift.vehicle_rego ?? '').toLowerCase().includes(normalizedQuery);
 
     const matchesStatus = filterStatus === 'all' || shift.status === filterStatus;
 
