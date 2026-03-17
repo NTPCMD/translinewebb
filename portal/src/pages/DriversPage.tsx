@@ -238,7 +238,7 @@ export function DriversPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ email: formData.email, password: formData.password, name: formData.name, phone: formData.phone }),
+        body: JSON.stringify({ email: formData.email, password: formData.password, full_name: formData.name || formData.email.split('@')[0], phone: formData.phone }),
       });
       if (!response.ok) {
         const errBody = await response.json().catch(() => ({}));

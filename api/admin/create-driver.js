@@ -55,11 +55,18 @@ export default async function handler(req, res) {
     /* get body                           */
     /* ---------------------------------- */
 
-    const { email, full_name } = req.body;
+    const { email, full_name, name } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: "Email required" });
     }
+
+    const safeName =
+      (full_name && full_name.trim() !== "")
+        ? full_name
+        : (name && name.trim() !== "")
+          ? name
+          : email.split("@")[0];
 
     /* ---------------------------------- */
     /* find existing auth user            */
@@ -101,7 +108,7 @@ export default async function handler(req, res) {
       .from("profiles")
       .upsert({
         id: authUserId,
-        full_name,
+        full_name: safeName,
         role: "driver"
       });
 
