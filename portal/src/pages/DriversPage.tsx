@@ -10,9 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
-import { listVehicles, assignDriverToVehicle, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
-import { fetchDriversFull, fetchDriversFullCount, isDriverRow } from '@/lib/drivers';
 import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -25,12 +23,10 @@ type ShiftRow = {
   status: 'active' | 'ended' | 'cancelled';
 };
 
-type VehicleAssignmentRow = {
+type VehicleOption = {
   id: string;
-  driver_id: string;
-  vehicle_id: string;
-  assigned_at: string;
-  unassigned_at: string | null;
+  rego: string;
+  status: string;
 };
 
 export function DriversPage() {
@@ -40,7 +36,7 @@ export function DriversPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [formData, setFormData] = useState({
@@ -49,77 +45,150 @@ export function DriversPage() {
     password: '',
     phone: '',
   });
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const { statusMap, setStatusMap } = useDriverLiveState();
   const [activeShiftMap, setActiveShiftMap] = useState<Record<string, ShiftRow>>({});
-  const [assignmentMap, setAssignmentMap] = useState<Record<string, VehicleAssignmentRow>>({});
-  const [editVehicleDialog, setEditVehicleDialog] = useState(false);
-  const [editDriver, setEditDriver] = useState<Driver | null>(null);
-  const [editVehicleId, setEditVehicleId] = useState('');
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDriver, setPasswordDriver] = useState<Driver | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const resolveDriverId = (driver: any) =>
     driver.driver_id ?? driver.id ?? driver.auth_user_id;
-  const vehicleMap = useMemo(() => {
-    const map = new Map<string, Vehicle>();
-    vehicles.forEach((vehicle) => map.set(vehicle.id, vehicle));
-    return map;
-  }, [vehicles]);
   const isOnline = (status?: DriverLiveStatus) =>
     isOnlineFromLastSeen(status?.last_seen_at) || Boolean(status?.is_online);
 
+  async function fetchDrivers() {
+    const { data, error: driversError } = await supabase
+      .from('drivers_with_current_vehicle')
+      .select('*')
+      .order('full_name');
+
+    if (driversError) {
+      console.error('fetchDrivers error:', driversError);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  async function fetchVehicles() {
+    const { data, error: vehiclesError } = await supabase
+      .from('vehicles')
+      .select('id, rego, status')
+      .eq('status', 'active')
+      .order('rego');
+
+    if (vehiclesError) {
+      console.error('fetchVehicles error:', vehiclesError);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  function openVehicleModal(driver: Driver) {
+    console.log('OPEN MODAL DRIVER:', driver);
+    console.log('driver.current_vehicle_id:', driver.current_vehicle_id, typeof driver.current_vehicle_id);
+
+    const matchedVehicle = vehicles.find(
+      (v) => String(v.id) === String(driver.current_vehicle_id)
+    );
+
+    console.log('matchedVehicle:', matchedVehicle);
+
+    setSelectedDriver(driver);
+    setSelectedVehicleId(driver.current_vehicle_id ? String(driver.current_vehicle_id) : '');
+    setIsVehicleModalOpen(true);
+  }
+
+  async function saveVehicleAssignment() {
+    if (!selectedDriver) return;
+
+    try {
+      if (!selectedVehicleId) {
+        const { error: unassignError } = await supabase.rpc('unassign_vehicle', {
+          p_driver: selectedDriver.driver_id,
+        });
+
+        if (unassignError) {
+          console.error('unassign_vehicle error:', unassignError);
+          alert('Failed to unassign vehicle');
+          return;
+        }
+      } else {
+        const { error: assignError } = await supabase.rpc('assign_vehicle', {
+          p_driver: selectedDriver.driver_id,
+          p_vehicle: selectedVehicleId,
+        });
+
+        if (assignError) {
+          console.error('assign_vehicle error:', assignError);
+          alert('Failed to assign vehicle');
+          return;
+        }
+      }
+
+      const refreshedDrivers = await fetchDrivers();
+      setDrivers(refreshedDrivers);
+      setTotalCount(refreshedDrivers.length);
+      setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
+
+      setIsVehicleModalOpen(false);
+      setSelectedDriver(null);
+      setSelectedVehicleId('');
+
+      alert('Vehicle updated successfully');
+    } catch (err) {
+      console.error('saveVehicleAssignment unexpected error:', err);
+      alert('Unexpected error updating vehicle');
+    }
+  }
+
+  async function loadPage() {
+    try {
+      setLoading(true);
+      const [driversData, vehiclesData, statusResponse, shiftsResponse] = await Promise.all([
+        fetchDrivers(),
+        fetchVehicles(),
+        supabase.from('view_driver_current_status').select('*'),
+        supabase.from('shifts').select('*').or('status.eq.active,ended_at.is.null'),
+      ]);
+
+      setDrivers(driversData);
+      setVehicles(vehiclesData);
+      setTotalCount(driversData.length);
+      setActiveCount(driversData.filter((d: any) => d.status === 'active').length);
+
+      const statusRows = (statusResponse.data as DriverLiveStatus[]) ?? [];
+      const nextStatusMap: Record<string, DriverLiveStatus> = {};
+      statusRows.forEach((row) => {
+        nextStatusMap[row.driver_id] = {
+          ...row,
+          is_online: isOnlineFromLastSeen(row.last_seen_at),
+        };
+      });
+      setStatusMap(nextStatusMap);
+
+      const activeShiftRows = (shiftsResponse.data as ShiftRow[]) ?? [];
+      const nextShiftMap: Record<string, ShiftRow> = {};
+      activeShiftRows.forEach((row) => {
+        nextShiftMap[row.driver_id] = row;
+      });
+      setActiveShiftMap(nextShiftMap);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load drivers or vehicles');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Fetch drivers (from profiles) and vehicles on mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [vehiclesList, driversFull, totalDriversCount, activeDriversCount, statusResponse, shiftsResponse, assignmentResponse] = await Promise.all([
-          listVehicles(),
-          fetchDriversFull(),
-          fetchDriversFullCount(),
-          fetchDriversFullCount({ status: 'active' }),
-          supabase.from('view_driver_current_status').select('*'),
-          supabase.from('shifts').select('*').or('status.eq.active,ended_at.is.null'),
-          supabase.from('vehicle_assignments').select('*').is('unassigned_at', null),
-        ]);
-        // Filter to only drivers, using a robust helper that falls back if `role` is missing
-        const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
-        setDrivers(onlyDrivers);
-        console.log('DriversPage: loaded drivers count=', onlyDrivers.length);
-        setTotalCount(totalDriversCount ?? onlyDrivers.length ?? 0);
-        setActiveCount(activeDriversCount ?? onlyDrivers.filter((d: any) => d.status === 'active').length);
-        setVehicles(vehiclesList);
-        const statusRows = (statusResponse.data as DriverLiveStatus[]) ?? [];
-        const nextStatusMap: Record<string, DriverLiveStatus> = {};
-        statusRows.forEach((row) => {
-          nextStatusMap[row.driver_id] = {
-            ...row,
-            is_online: isOnlineFromLastSeen(row.last_seen_at),
-          };
-        });
-        setStatusMap(nextStatusMap);
-        const activeShiftRows = (shiftsResponse.data as ShiftRow[]) ?? [];
-        const nextShiftMap: Record<string, ShiftRow> = {};
-        activeShiftRows.forEach((row) => {
-          nextShiftMap[row.driver_id] = row;
-        });
-        setActiveShiftMap(nextShiftMap);
-        const assignmentRows = (assignmentResponse.data as VehicleAssignmentRow[]) ?? [];
-        const nextAssignmentMap: Record<string, VehicleAssignmentRow> = {};
-        assignmentRows.forEach((row) => {
-          nextAssignmentMap[row.driver_id] = row;
-        });
-        setAssignmentMap(nextAssignmentMap);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load drivers or vehicles');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    loadPage();
   }, []);
 
   const filteredDrivers = drivers.filter(
@@ -179,24 +248,19 @@ export function DriversPage() {
       }
       // Refetch drivers list from drivers_full
       const previousTotal = totalCount;
-      const [driversFull, totalDriversCount, activeDriversCount] = await Promise.all([
-        fetchDriversFull(),
-        fetchDriversFullCount(),
-        fetchDriversFullCount({ status: 'active' }),
-      ]);
-      const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
+      const refreshedDrivers = await fetchDrivers();
       const normalizedEmail = formData.email.toLowerCase();
-      const createdDriver = onlyDrivers.find((driver: any) =>
+      const createdDriver = refreshedDrivers.find((driver: any) =>
         (driver.profile_email ?? driver.email ?? '').toLowerCase() === normalizedEmail
       );
-      setDrivers(onlyDrivers);
-      setTotalCount(totalDriversCount ?? onlyDrivers.length);
-      setActiveCount(activeDriversCount ?? onlyDrivers.filter((d: any) => d.status === 'active').length);
-      if (!createdDriver || (totalDriversCount ?? onlyDrivers.length) <= previousTotal) {
+      setDrivers(refreshedDrivers);
+      setTotalCount(refreshedDrivers.length);
+      setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
+      if (!createdDriver || refreshedDrivers.length <= previousTotal) {
         const debugDetails = {
           expectedEmail: formData.email,
-          listLength: onlyDrivers.length,
-          totalCount: totalDriversCount ?? onlyDrivers.length,
+          listLength: refreshedDrivers.length,
+          totalCount: refreshedDrivers.length,
           previousTotal,
         };
         console.error('DriversPage: verification failed after create', debugDetails);
@@ -214,23 +278,25 @@ export function DriversPage() {
   };
 
   const handleDeleteClick = (driver: Driver) => {
-    setSelectedDriver(driver);
+    setDriverToDelete(driver);
     setDeleteDialog(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedDriver) return;
+    if (!driverToDelete) return;
     try {
       // Soft delete the associated profile by using auth_user_id
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ status: 'inactive' })
-        .eq('id', selectedDriver.auth_user_id);
+        .eq('id', driverToDelete.auth_user_id);
       if (updateError) throw updateError;
-      setDrivers(drivers.map((d) => d.driver_id === selectedDriver.driver_id ? { ...d, status: 'inactive' } : d));
-      setActiveCount(Math.max(0, activeCount - 1));
+      const refreshedDrivers = await fetchDrivers();
+      setDrivers(refreshedDrivers);
+      setTotalCount(refreshedDrivers.length);
+      setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
       setDeleteDialog(false);
-      setSelectedDriver(null);
+      setDriverToDelete(null);
       setError(null);
     } catch (err) {
       setError('Failed to delete driver');
@@ -362,9 +428,6 @@ export function DriversPage() {
                         const driverId = resolveDriverId(driver);
                         const status = driverId ? statusMap[driverId] : undefined;
                         const activeShift = driverId ? activeShiftMap[driverId] : undefined;
-                        const assignment = driverId ? assignmentMap[driverId] : undefined;
-                        const vehicleId = status?.vehicle_id ?? activeShift?.vehicle_id ?? assignment?.vehicle_id;
-                        const vehicle = vehicleId ? vehicleMap.get(vehicleId) : undefined;
                         return (
                           <TableRow key={driver.driver_id ?? driverId} className="border-gray-800">
                             <TableCell className="font-medium text-white">
@@ -402,13 +465,7 @@ export function DriversPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-gray-300">
-                              {vehicle ? (
-                                <span>
-                                  {vehicle.rego} • {vehicle.make} {vehicle.model}
-                                </span>
-                              ) : (
-                                <span className="text-gray-500">Unassigned</span>
-                              )}
+                              {driver.current_vehicle_rego || 'None'}
                             </TableCell>
                             <TableCell className="text-gray-300">
                               {activeShift ? (
@@ -441,10 +498,7 @@ export function DriversPage() {
                                   size="sm"
                                   className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                                   onClick={() => {
-                                    setEditDriver(driver);
-                                    const assignment = driverId ? assignmentMap[driverId] : undefined;
-                                    setEditVehicleId(assignment?.vehicle_id ?? '');
-                                    setEditVehicleDialog(true);
+                                    openVehicleModal(driver);
                                   }}
                                 >
                                   <Eye className="w-4 h-4" />
@@ -476,7 +530,7 @@ export function DriversPage() {
                     </>
                   )}
                       {/* Edit Vehicle Assignment Dialog */}
-                      <Dialog open={editVehicleDialog} onOpenChange={setEditVehicleDialog}>
+                      <Dialog open={isVehicleModalOpen} onOpenChange={setIsVehicleModalOpen}>
                         <DialogContent className="bg-[#161616] border-gray-800">
                           <DialogHeader>
                             <DialogTitle className="text-white">Change Assigned Vehicle</DialogTitle>
@@ -487,43 +541,23 @@ export function DriversPage() {
                           <div className="space-y-4">
                             <div>
                               <Label className="text-gray-300">Vehicle</Label>
+                              {console.log('vehicles list:', vehicles)}
+                              {console.log('selectedVehicleId:', selectedVehicleId, typeof selectedVehicleId)}
                               <select
-                                value={editVehicleId}
-                                onChange={(e) => setEditVehicleId(e.target.value)}
+                                value={String(selectedVehicleId || '')}
+                                onChange={(e) => setSelectedVehicleId(String(e.target.value))}
                                 className="w-full bg-[#0F0F0F] border border-gray-700 text-white p-2 rounded"
                               >
-                                <option value="">-- None --</option>
+                                <option value="">None</option>
                                 {vehicles.map((vehicle) => (
-                                  <option key={vehicle.id} value={vehicle.id}>
-                                    {vehicle.rego} ({vehicle.make} {vehicle.model})
+                                  <option key={vehicle.id} value={String(vehicle.id)}>
+                                    {vehicle.rego}
                                   </option>
                                 ))}
                               </select>
                             </div>
                             <Button
-                              onClick={async () => {
-                                if (!editDriver) return;
-                                try {
-                                  // Assign to selected vehicle via RPC to avoid unique constraint conflicts
-                                  if (editVehicleId) {
-                                    console.log("Assigning vehicle id:", editVehicleId, "to driver id:", editDriver.driver_id);
-                                    await assignDriverToVehicle(editDriver.driver_id, editVehicleId);
-                                  }
-                                  // Refresh vehicles state
-                                  const updatedVehicles = await listVehicles();
-                                  setVehicles(updatedVehicles);
-                                  setEditVehicleDialog(false);
-                                } catch (err: any) {
-                                  console.error('Failed to update vehicle assignment:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-                                  const code = err?.code || err?.status;
-                                  const msg = err?.message || err?.error || JSON.stringify(err);
-                                  if (msg.includes('one_active_vehicle_per_driver') || msg.includes('duplicate key') || code === '23505' || code === 409) {
-                                    setError('Driver already has an active vehicle. Unassign their current vehicle first.');
-                                  } else {
-                                    setError('Failed to update vehicle assignment: ' + (msg || 'unknown error'));
-                                  }
-                                }
-                              }}
+                              onClick={saveVehicleAssignment}
                               className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white"
                             >
                               Save
@@ -629,7 +663,7 @@ export function DriversPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Driver</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete {selectedDriver?.full_name ?? selectedDriver?.profile_email ?? selectedDriver?.driver_id}? This action cannot be undone.
+              Are you sure you want to delete {driverToDelete?.full_name ?? driverToDelete?.profile_email ?? driverToDelete?.driver_id}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
