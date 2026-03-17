@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Search, Plus, Eye, Trash2, Loader } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDriverOptions, isDriverRow } from '@/lib/drivers';
-import { assignDriverToVehicle } from '@/lib/db/vehicles';
+import { fetchVehicles as fetchVehiclesFromDb } from '@/lib/db/vehicles';
 
 interface Vehicle {
   id: string;
@@ -19,7 +19,8 @@ interface Vehicle {
   model: string | null;
   status: string;
   is_active: boolean;
-  assignedDriverId?: string | null;
+  driver_name?: string | null;
+  driver_id?: string | null;
 }
 
 export function VehiclesPage() {
@@ -44,61 +45,34 @@ export function VehiclesPage() {
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [editDriverId, setEditDriverId] = useState('');
 
-  const findDriverForVehicle = (vehicle: Vehicle) =>
-    drivers.find(
-      (d) => d.driver_id === vehicle.assignedDriverId || d.auth_user_id === vehicle.assignedDriverId
-    );
-
   useEffect(() => {
-    fetchData();
+    fetchVehicles();
+    fetchDrivers();
   }, []);
 
-  const fetchData = async () => {
+  const fetchVehicles = async () => {
     try {
       setLoading(true);
-
-      const { data: vehiclesData, error: vehiclesError } = await supabase
-        .from('vehicles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (vehiclesError) throw vehiclesError;
-
-      const driversFull = await fetchDriverOptions();
-      const onlyDrivers = (driversFull ?? []).filter(isDriverRow);
-
-      // Fetch current assignments
-      const { data: assignments } = await supabase
-        .from('vehicle_assignments')
-        .select('vehicle_id, driver_id')
-        .is('unassigned_at', null);
-
-      const assignmentMap: Record<string, string> = {};
-      (assignments ?? []).forEach((a) => {
-        assignmentMap[a.vehicle_id] = a.driver_id;
-      });
-
-      const mapped: Vehicle[] = (vehiclesData ?? []).map((v) => ({
-        id: v.id,
-        rego: v.rego,
-        make: v.make,
-        model: v.model,
-        status: v.status ?? (v.is_active ? 'active' : 'inactive'),
-        is_active: v.is_active,
-        assignedDriverId: assignmentMap[v.id] ?? null,
-      }));
-
-      setVehicles(mapped);
-      setTotalCount(mapped.length);
-      setActiveCount(mapped.filter((v) => v.status === 'active').length);
-      setMaintenanceCount(mapped.filter((v) => v.status === 'maintenance').length);
-      setDrivers(onlyDrivers);
+      const data = await fetchVehiclesFromDb();
+      setVehicles(data as Vehicle[]);
+      setTotalCount(data.length);
+      setActiveCount(data.filter((v) => v.status === 'active').length);
+      setMaintenanceCount(data.filter((v) => v.status === 'maintenance').length);
       setError(null);
     } catch (err: any) {
       setError('Failed to load vehicles');
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const driversFull = await fetchDriverOptions();
+      setDrivers((driversFull ?? []).filter(isDriverRow));
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -137,22 +111,10 @@ export function VehiclesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create vehicle');
 
-      const newVehicle: Vehicle = {
-        id: data.vehicle.id,
-        rego: data.vehicle.rego,
-        make: data.vehicle.make,
-        model: data.vehicle.model,
-        status: data.vehicle.status,
-        is_active: true,
-        assignedDriverId: null,
-      };
-
-      setVehicles((prev) => [newVehicle, ...prev]);
-      setTotalCount((c) => c + 1);
-      if (newVehicle.status === 'active') setActiveCount((c) => c + 1);
       setDialogOpen(false);
       setFormData({ rego: '', make: '', model: '', status: 'active' });
       setError(null);
+      await fetchVehicles();
     } catch (err: any) {
       setError(err.message || 'Failed to create vehicle');
       console.error(err);
@@ -169,13 +131,10 @@ export function VehiclesPage() {
 
       if (delError) throw delError;
 
-      setVehicles((prev) => prev.filter((v) => v.id !== selectedVehicle.id));
-      setTotalCount((c) => Math.max(0, c - 1));
-      if (selectedVehicle.status === 'active') setActiveCount((c) => Math.max(0, c - 1));
-      if (selectedVehicle.status === 'maintenance') setMaintenanceCount((c) => Math.max(0, c - 1));
       setDeleteDialog(false);
       setSelectedVehicle(null);
       setError(null);
+      await fetchVehicles();
     } catch (err: any) {
       setError('Failed to delete vehicle');
       console.error(err);
@@ -184,37 +143,26 @@ export function VehiclesPage() {
 
   const handleSaveAssignment = async () => {
     if (!editVehicle) return;
-    try {
-      if (editDriverId) {
-        const { data, error: driverError } = await supabase
-          .from('drivers_full')
-          .select('driver_id')
-          .eq('driver_id', editDriverId)
-          .single();
 
-        if (driverError || !data) {
-          setError('Selected driver does not exist.');
-          return;
-        }
+    try {
+      const { error } = await supabase.rpc('assign_vehicle', {
+        p_driver: editDriverId || null,
+        p_vehicle: editVehicle.id,
+      });
+
+      if (error) {
+        console.error('Assignment failed:', error);
+        setError('Failed to assign vehicle');
+        return;
       }
 
-      const assigned = await assignDriverToVehicle(editDriverId || null, editVehicle.id);
-      if (!assigned) throw new Error('Assignment returned no data');
-
-      setVehicles((prev) =>
-        prev.map((v) =>
-          v.id === editVehicle.id ? { ...v, assignedDriverId: editDriverId || null } : v
-        )
-      );
       setEditDriverDialog(false);
       setError(null);
-    } catch (err: any) {
-      const msg = err?.message || '';
-      if (msg.includes('one_active_vehicle_per_driver') || msg.includes('duplicate key')) {
-        setError('Driver already has an active vehicle. Unassign their current vehicle first.');
-      } else {
-        setError('Failed to update assignment: ' + msg);
-      }
+      await fetchVehicles();
+      await fetchDrivers();
+    } catch (err) {
+      console.error(err);
+      setError('Unexpected error assigning vehicle');
     }
   };
 
@@ -305,10 +253,6 @@ export function VehiclesPage() {
                     </TableRow>
                   ) : (
                     filteredVehicles.map((vehicle) => {
-                      const driver = findDriverForVehicle(vehicle);
-                      const driverLabel = driver
-                        ? (driver.full_name ?? driver.profile_email ?? driver.email)
-                        : null;
                       return (
                         <TableRow key={vehicle.id} className="border-gray-800">
                           <TableCell className="font-medium text-white">{vehicle.rego}</TableCell>
@@ -316,7 +260,7 @@ export function VehiclesPage() {
                             {[vehicle.make, vehicle.model].filter(Boolean).join(' ') || '—'}
                           </TableCell>
                           <TableCell className="text-gray-300">
-                            {driverLabel ?? <span className="text-gray-500">Unassigned</span>}
+                            {vehicle.driver_name || <span className="text-gray-500">Unassigned</span>}
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadge(vehicle.status)}>{vehicle.status}</Badge>
@@ -329,8 +273,10 @@ export function VehiclesPage() {
                                 className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                                 onClick={() => {
                                   setEditVehicle(vehicle);
-                                  const d = findDriverForVehicle(vehicle);
-                                  setEditDriverId(d?.driver_id || '');
+                                  const currentDriver = drivers.find(
+                                    (d) => d.driver_id === vehicle.driver_id
+                                  );
+                                  setEditDriverId(currentDriver?.driver_id || '');
                                   setEditDriverDialog(true);
                                 }}
                               >

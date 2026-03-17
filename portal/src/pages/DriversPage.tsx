@@ -59,12 +59,6 @@ export function DriversPage() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDriver, setPasswordDriver] = useState<Driver | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const findVehicleForDriver = (driver: Driver) =>
-    vehicles.find(
-      (vehicle) =>
-        vehicle.assigned_driver_id === driver.driver_id ||
-        vehicle.assigned_driver_id === driver.auth_user_id
-    );
   const resolveDriverId = (driver: any) =>
     driver.driver_id ?? driver.id ?? driver.auth_user_id;
   const vehicleMap = useMemo(() => {
@@ -370,7 +364,7 @@ export function DriversPage() {
                         const activeShift = driverId ? activeShiftMap[driverId] : undefined;
                         const assignment = driverId ? assignmentMap[driverId] : undefined;
                         const vehicleId = status?.vehicle_id ?? activeShift?.vehicle_id ?? assignment?.vehicle_id;
-                        const vehicle = vehicleId ? vehicleMap.get(vehicleId) : findVehicleForDriver(driver);
+                        const vehicle = vehicleId ? vehicleMap.get(vehicleId) : undefined;
                         return (
                           <TableRow key={driver.driver_id ?? driverId} className="border-gray-800">
                             <TableCell className="font-medium text-white">
@@ -448,8 +442,8 @@ export function DriversPage() {
                                   className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                                   onClick={() => {
                                     setEditDriver(driver);
-                                    const foundVehicle = findVehicleForDriver(driver);
-                                    setEditVehicleId(foundVehicle ? foundVehicle.id : '');
+                                    const assignment = driverId ? assignmentMap[driverId] : undefined;
+                                    setEditVehicleId(assignment?.vehicle_id ?? '');
                                     setEditVehicleDialog(true);
                                   }}
                                 >
@@ -501,7 +495,7 @@ export function DriversPage() {
                                 <option value="">-- None --</option>
                                 {vehicles.map((vehicle) => (
                                   <option key={vehicle.id} value={vehicle.id}>
-                                    {vehicle.plate_number} ({vehicle.make} {vehicle.model})
+                                    {vehicle.rego} ({vehicle.make} {vehicle.model})
                                   </option>
                                 ))}
                               </select>
@@ -513,8 +507,7 @@ export function DriversPage() {
                                   // Assign to selected vehicle via RPC to avoid unique constraint conflicts
                                   if (editVehicleId) {
                                     console.log("Assigning vehicle id:", editVehicleId, "to driver id:", editDriver.driver_id);
-                                    const assigned = await assignDriverToVehicle(editDriver.driver_id, editVehicleId);
-                                    if (!assigned) throw new Error('Assignment RPC returned no data');
+                                    await assignDriverToVehicle(editDriver.driver_id, editVehicleId);
                                   }
                                   // Refresh vehicles state
                                   const updatedVehicles = await listVehicles();
