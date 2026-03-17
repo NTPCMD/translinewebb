@@ -285,11 +285,10 @@ export function DriversPage() {
   const handleDeleteConfirm = async () => {
     if (!driverToDelete) return;
     try {
-      // Soft delete the associated profile by using auth_user_id
       const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ status: 'inactive' })
-        .eq('id', driverToDelete.auth_user_id);
+          .from('drivers')
+          .update({ status: 'inactive' })
+          .eq('driver_id', driverToDelete.driver_id);
       if (updateError) throw updateError;
       const refreshedDrivers = await fetchDrivers();
       setDrivers(refreshedDrivers);
