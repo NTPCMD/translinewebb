@@ -282,26 +282,54 @@ export function DriversPage() {
     setDeleteDialog(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  async function handleDeleteConfirm() {
     if (!driverToDelete) return;
+
     try {
-      const { error: updateError } = await supabase
-          .from('drivers')
-          .update({ status: 'inactive' })
-          .eq('driver_id', driverToDelete.driver_id);
-      if (updateError) throw updateError;
+      // 1. Close active vehicle assignment
+      await supabase
+        .from('vehicle_assignments')
+        .update({ unassigned_at: new Date() })
+        .eq('driver_id', driverToDelete.driver_id)
+        .is('unassigned_at', null);
+
+      // 2. Delete driver-related activity (optional but safe)
+      await supabase
+        .from('driver_presence')
+        .delete()
+        .eq('driver_id', driverToDelete.driver_id);
+
+      // 3. Delete driver row
+      const { error: driverError } = await supabase
+        .from('drivers')
+        .delete()
+        .eq('id', driverToDelete.driver_id);
+
+      if (driverError) {
+        console.error('Delete driver error:', driverError);
+        alert('Failed to delete driver');
+        return;
+      }
+
+      // 4. Delete profile (optional but recommended)
+      await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', driverToDelete.auth_user_id);
+
+      // 5. Refresh UI
       const refreshedDrivers = await fetchDrivers();
       setDrivers(refreshedDrivers);
       setTotalCount(refreshedDrivers.length);
       setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
       setDeleteDialog(false);
       setDriverToDelete(null);
-      setError(null);
+      alert('Driver deleted successfully');
     } catch (err) {
-      setError('Failed to delete driver');
-      console.error(err);
+      console.error('Delete unexpected error:', err);
+      alert('Unexpected error deleting driver');
     }
-  };
+  }
 
   const handlePasswordReset = async () => {
     if (!passwordDriver) return;
