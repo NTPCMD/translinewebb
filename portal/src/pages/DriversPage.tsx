@@ -29,14 +29,30 @@ type VehicleOption = {
   status: string;
 };
 
+type DriverRow = {
+  id?: string | null;
+  driver_id: string;
+  full_name?: string | null;
+  profile_email?: string | null;
+  email?: string | null;
+  auth_user_id?: string | null;
+  phone?: string | null;
+  status?: string | null;
+  current_vehicle_id?: string | null;
+  current_vehicle_rego?: string | null;
+};
+
+const countDriversByStatus = (rows: DriverRow[], status: string) =>
+  rows.filter((driver) => driver.status === status).length;
+
 export function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [drivers, setDrivers] = useState<any[]>([]); // profiles
+  const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
+  const [driverToDelete, setDriverToDelete] = useState<DriverRow | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [formData, setFormData] = useState({
@@ -48,13 +64,13 @@ export function DriversPage() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const { statusMap, setStatusMap } = useDriverLiveState();
   const [activeShiftMap, setActiveShiftMap] = useState<Record<string, ShiftRow>>({});
-  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<DriverRow | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [passwordDriver, setPasswordDriver] = useState<Driver | null>(null);
+  const [passwordDriver, setPasswordDriver] = useState<DriverRow | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const resolveDriverId = (driver: any) =>
+  const resolveDriverId = (driver: DriverRow) =>
     driver.driver_id ?? driver.id ?? driver.auth_user_id;
   const isOnline = (status?: DriverLiveStatus) =>
     isOnlineFromLastSeen(status?.last_seen_at) || Boolean(status?.is_online);
@@ -88,16 +104,7 @@ export function DriversPage() {
     return data ?? [];
   }
 
-  function openVehicleModal(driver: Driver) {
-    console.log('OPEN MODAL DRIVER:', driver);
-    console.log('driver.current_vehicle_id:', driver.current_vehicle_id, typeof driver.current_vehicle_id);
-
-    const matchedVehicle = vehicles.find(
-      (v) => String(v.id) === String(driver.current_vehicle_id)
-    );
-
-    console.log('matchedVehicle:', matchedVehicle);
-
+  function openVehicleModal(driver: DriverRow) {
     setSelectedDriver(driver);
     setSelectedVehicleId(driver.current_vehicle_id ? String(driver.current_vehicle_id) : '');
     setIsVehicleModalOpen(true);
@@ -108,12 +115,14 @@ export function DriversPage() {
 
     try {
       if (!selectedVehicleId) {
-        const { error: unassignError } = await supabase.rpc('unassign_vehicle', {
-          p_driver: selectedDriver.driver_id,
-        });
+        const { error: unassignError } = await supabase
+          .from('vehicle_assignments')
+          .update({ unassigned_at: new Date().toISOString() })
+          .eq('driver_id', selectedDriver.driver_id)
+          .is('unassigned_at', null);
 
         if (unassignError) {
-          console.error('unassign_vehicle error:', unassignError);
+          console.error('vehicle_assignments unassign error:', unassignError);
           alert('Failed to unassign vehicle');
           return;
         }
@@ -131,9 +140,9 @@ export function DriversPage() {
       }
 
       const refreshedDrivers = await fetchDrivers();
-      setDrivers(refreshedDrivers);
+  setDrivers(refreshedDrivers as DriverRow[]);
       setTotalCount(refreshedDrivers.length);
-      setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
+  setActiveCount(countDriversByStatus(refreshedDrivers as DriverRow[], 'active'));
 
       setIsVehicleModalOpen(false);
       setSelectedDriver(null);
@@ -156,10 +165,10 @@ export function DriversPage() {
         supabase.from('shifts').select('*').or('status.eq.active,ended_at.is.null'),
       ]);
 
-      setDrivers(driversData);
+      setDrivers(driversData as DriverRow[]);
       setVehicles(vehiclesData);
       setTotalCount(driversData.length);
-      setActiveCount(driversData.filter((d: any) => d.status === 'active').length);
+      setActiveCount(countDriversByStatus(driversData as DriverRow[], 'active'));
 
       const statusRows = (statusResponse.data as DriverLiveStatus[]) ?? [];
       const nextStatusMap: Record<string, DriverLiveStatus> = {};
@@ -250,12 +259,12 @@ export function DriversPage() {
       const previousTotal = totalCount;
       const refreshedDrivers = await fetchDrivers();
       const normalizedEmail = formData.email.toLowerCase();
-      const createdDriver = refreshedDrivers.find((driver: any) =>
+      const createdDriver = refreshedDrivers.find((driver: DriverRow) =>
         (driver.profile_email ?? driver.email ?? '').toLowerCase() === normalizedEmail
       );
-      setDrivers(refreshedDrivers);
+      setDrivers(refreshedDrivers as DriverRow[]);
       setTotalCount(refreshedDrivers.length);
-      setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
+      setActiveCount(countDriversByStatus(refreshedDrivers as DriverRow[], 'active'));
       if (!createdDriver || refreshedDrivers.length <= previousTotal) {
         const debugDetails = {
           expectedEmail: formData.email,
@@ -277,7 +286,7 @@ export function DriversPage() {
     }
   };
 
-  const handleDeleteClick = (driver: Driver) => {
+  const handleDeleteClick = (driver: DriverRow) => {
     setDriverToDelete(driver);
     setDeleteDialog(true);
   };
@@ -319,9 +328,9 @@ export function DriversPage() {
 
       // 5. Refresh UI
       const refreshedDrivers = await fetchDrivers();
-      setDrivers(refreshedDrivers);
+      setDrivers(refreshedDrivers as DriverRow[]);
       setTotalCount(refreshedDrivers.length);
-      setActiveCount(refreshedDrivers.filter((d: any) => d.status === 'active').length);
+      setActiveCount(countDriversByStatus(refreshedDrivers as DriverRow[], 'active'));
       setDeleteDialog(false);
       setDriverToDelete(null);
       alert('Driver deleted successfully');
@@ -568,8 +577,6 @@ export function DriversPage() {
                           <div className="space-y-4">
                             <div>
                               <Label className="text-gray-300">Vehicle</Label>
-                              {console.log('vehicles list:', vehicles)}
-                              {console.log('selectedVehicleId:', selectedVehicleId, typeof selectedVehicleId)}
                               <select
                                 value={String(selectedVehicleId || '')}
                                 onChange={(e) => setSelectedVehicleId(String(e.target.value))}

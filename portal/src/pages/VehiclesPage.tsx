@@ -9,8 +9,6 @@ import { Label } from '@/app/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, Plus, Eye, Trash2, Loader } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { fetchDriverOptions, isDriverRow } from '@/lib/drivers';
-import { fetchVehicles as fetchVehiclesFromDb } from '@/lib/db/vehicles';
 
 interface Vehicle {
   id: string;
@@ -23,6 +21,14 @@ interface Vehicle {
   driver_id?: string | null;
 }
 
+interface Driver {
+  driver_id: string;
+  full_name: string;
+}
+
+const countVehiclesByStatus = (rows: Vehicle[], status: string) =>
+  rows.filter((vehicle) => vehicle.status === status).length;
+
 export function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -30,7 +36,6 @@ export function VehiclesPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [maintenanceCount, setMaintenanceCount] = useState(0);
@@ -40,24 +45,56 @@ export function VehiclesPage() {
     model: '',
     status: 'active',
   });
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [editDriverDialog, setEditDriverDialog] = useState(false);
-  const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
-  const [editDriverId, setEditDriverId] = useState('');
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchVehicles();
-    fetchDrivers();
+    loadPage();
   }, []);
 
-  const fetchVehicles = async () => {
+  async function fetchVehicles() {
+    const { data, error } = await supabase
+      .from('vehicles_with_driver')
+      .select('*')
+      .order('rego');
+
+    if (error) {
+      console.error('fetchVehicles error:', error);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  async function fetchDrivers() {
+    const { data, error } = await supabase
+      .from('drivers_with_current_vehicle')
+      .select('driver_id, full_name')
+      .order('full_name');
+
+    if (error) {
+      console.error('fetchDrivers error:', error);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  async function loadPage() {
     try {
       setLoading(true);
-      const data = await fetchVehiclesFromDb();
-      setVehicles(data as Vehicle[]);
-      setTotalCount(data.length);
-      setActiveCount(data.filter((v) => v.status === 'active').length);
-      setMaintenanceCount(data.filter((v) => v.status === 'maintenance').length);
+      const [vehiclesData, driversData] = await Promise.all([
+        fetchVehicles(),
+        fetchDrivers(),
+      ]);
+
+      setVehicles(vehiclesData as Vehicle[]);
+      setDrivers(driversData as Driver[]);
+      setTotalCount(vehiclesData.length);
+      setActiveCount(countVehiclesByStatus(vehiclesData as Vehicle[], 'active'));
+      setMaintenanceCount(countVehiclesByStatus(vehiclesData as Vehicle[], 'maintenance'));
       setError(null);
     } catch (err: any) {
       setError('Failed to load vehicles');
@@ -65,16 +102,7 @@ export function VehiclesPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchDrivers = async () => {
-    try {
-      const driversFull = await fetchDriverOptions();
-      setDrivers((driversFull ?? []).filter(isDriverRow));
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  }
 
   const filteredVehicles = vehicles.filter((v) => {
     const q = searchQuery.toLowerCase();
@@ -114,7 +142,11 @@ export function VehiclesPage() {
       setDialogOpen(false);
       setFormData({ rego: '', make: '', model: '', status: 'active' });
       setError(null);
-      await fetchVehicles();
+      const updatedVehicles = await fetchVehicles();
+      setVehicles(updatedVehicles as Vehicle[]);
+      setTotalCount(updatedVehicles.length);
+      setActiveCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'active'));
+      setMaintenanceCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'maintenance'));
     } catch (err: any) {
       setError(err.message || 'Failed to create vehicle');
       console.error(err);
@@ -134,37 +166,67 @@ export function VehiclesPage() {
       setDeleteDialog(false);
       setSelectedVehicle(null);
       setError(null);
-      await fetchVehicles();
+      const updatedVehicles = await fetchVehicles();
+      setVehicles(updatedVehicles as Vehicle[]);
+      setTotalCount(updatedVehicles.length);
+      setActiveCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'active'));
+      setMaintenanceCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'maintenance'));
     } catch (err: any) {
       setError('Failed to delete vehicle');
       console.error(err);
     }
   };
 
-  const handleSaveAssignment = async () => {
-    if (!editVehicle) return;
+  function openAssignModal(vehicle: Vehicle) {
+    setSelectedVehicle(vehicle);
+    setSelectedDriverId(vehicle.driver_id ? String(vehicle.driver_id) : '');
+    setIsAssignModalOpen(true);
+  }
+
+  async function saveVehicleAssignment() {
+    if (!selectedVehicle) return;
 
     try {
-      const { error } = await supabase.rpc('assign_vehicle', {
-        p_driver: editDriverId || null,
-        p_vehicle: editVehicle.id,
-      });
+      if (!selectedDriverId) {
+        // unassign
+        const { error } = await supabase
+          .from('vehicle_assignments')
+          .update({ unassigned_at: new Date() })
+          .eq('vehicle_id', selectedVehicle.id)
+          .is('unassigned_at', null);
 
-      if (error) {
-        console.error('Assignment failed:', error);
-        setError('Failed to assign vehicle');
-        return;
+        if (error) {
+          console.error(error);
+          alert('Failed to unassign vehicle');
+          return;
+        }
+      } else {
+        // assign (reuse same RPC)
+        const { error } = await supabase.rpc('assign_vehicle', {
+          p_driver: selectedDriverId,
+          p_vehicle: selectedVehicle.id,
+        });
+
+        if (error) {
+          console.error(error);
+          alert('Failed to assign vehicle');
+          return;
+        }
       }
 
-      setEditDriverDialog(false);
-      setError(null);
-      await fetchVehicles();
-      await fetchDrivers();
+      const refreshedVehicles = await fetchVehicles();
+      setVehicles(refreshedVehicles as Vehicle[]);
+
+      setIsAssignModalOpen(false);
+      setSelectedVehicle(null);
+      setSelectedDriverId('');
+
+      alert('Vehicle updated successfully');
     } catch (err) {
       console.error(err);
-      setError('Unexpected error assigning vehicle');
+      alert('Unexpected error');
     }
-  };
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -272,12 +334,7 @@ export function VehiclesPage() {
                                 size="sm"
                                 className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
                                 onClick={() => {
-                                  setEditVehicle(vehicle);
-                                  const currentDriver = drivers.find(
-                                    (d) => d.driver_id === vehicle.driver_id
-                                  );
-                                  setEditDriverId(currentDriver?.driver_id || '');
-                                  setEditDriverDialog(true);
+                                  openAssignModal(vehicle);
                                 }}
                               >
                                 <Eye className="w-4 h-4" />
@@ -345,32 +402,32 @@ export function VehiclesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Driver Assignment Dialog */}
-      <Dialog open={editDriverDialog} onOpenChange={setEditDriverDialog}>
+      {/* Assign Driver Modal */}
+      <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
         <DialogContent className="bg-[#161616] border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-white">Assign Driver</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Assign or change the driver for {editVehicle?.rego}
+              Assign or change the driver for {selectedVehicle?.rego}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-gray-300">Driver</Label>
               <select
-                value={editDriverId}
-                onChange={(e) => setEditDriverId(e.target.value)}
+                value={String(selectedDriverId || '')}
+                onChange={(e) => setSelectedDriverId(String(e.target.value))}
                 className="w-full bg-[#0F0F0F] border border-gray-700 text-white p-2 rounded"
               >
-                <option value="">-- None --</option>
+                <option value="">Unassigned</option>
                 {drivers.map((driver) => (
-                  <option key={driver.driver_id} value={driver.driver_id}>
-                    {driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}
+                  <option key={driver.driver_id} value={String(driver.driver_id)}>
+                    {driver.full_name}
                   </option>
                 ))}
               </select>
             </div>
-            <Button onClick={handleSaveAssignment} className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white">
+            <Button onClick={saveVehicleAssignment} className="w-full bg-[#FF6B35] hover:bg-[#E55A2B] text-white">
               Save
             </Button>
           </div>
