@@ -104,6 +104,13 @@ export function DriversPage() {
     return data ?? [];
   }
 
+  async function unassignDriverFromAllVehicles(driverId: string) {
+    const { error } = await supabase.rpc('unassign_driver', {
+      p_driver: driverId,
+    });
+    if (error) throw error;
+  }
+
   function openVehicleModal(driver: DriverRow) {
     setSelectedDriver(driver);
     setSelectedVehicleId(driver.current_vehicle_id ? String(driver.current_vehicle_id) : '');
@@ -115,14 +122,10 @@ export function DriversPage() {
 
     try {
       if (!selectedVehicleId) {
-        const { error: unassignError } = await supabase
-          .from('vehicle_assignments')
-          .update({ unassigned_at: new Date().toISOString() })
-          .eq('driver_id', selectedDriver.driver_id)
-          .is('unassigned_at', null);
-
-        if (unassignError) {
-          console.error('vehicle_assignments unassign error:', unassignError);
+        try {
+          await unassignDriverFromAllVehicles(selectedDriver.driver_id);
+        } catch (unassignError) {
+          console.error('assign_vehicle unassign error:', unassignError);
           alert('Failed to unassign vehicle');
           return;
         }
@@ -295,12 +298,8 @@ export function DriversPage() {
     if (!driverToDelete) return;
 
     try {
-      // 1. Close active vehicle assignment
-      await supabase
-        .from('vehicle_assignments')
-        .update({ unassigned_at: new Date() })
-        .eq('driver_id', driverToDelete.driver_id)
-        .is('unassigned_at', null);
+      // 1. Close active vehicle assignment via canonical RPC
+      await unassignDriverFromAllVehicles(driverToDelete.driver_id);
 
       // 2. Delete driver-related activity (optional but safe)
       await supabase

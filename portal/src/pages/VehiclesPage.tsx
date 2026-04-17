@@ -188,12 +188,10 @@ export function VehiclesPage() {
 
     try {
       if (!selectedDriverId) {
-        // unassign
-        const { error } = await supabase
-          .from('vehicle_assignments')
-          .update({ unassigned_at: new Date() })
-          .eq('vehicle_id', selectedVehicle.id)
-          .is('unassigned_at', null);
+        const { error } = await supabase.rpc('assign_vehicle', {
+          p_driver: null,
+          p_vehicle: selectedVehicle.id,
+        });
 
         if (error) {
           console.error(error);
