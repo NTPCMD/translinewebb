@@ -57,7 +57,9 @@ export function LiveMapPage() {
         listDrivers(),
         listLatestLocationsByDrivers(),
         listVehicles(),
-        supabase.from('view_driver_current_status').select('*'),
+        supabase
+          .from('view_driver_current_status')
+          .select('driver_id, last_seen_at, is_online, status_state, on_break, status_started_at, last_location_at, lat, lng, speed_kmh, heading, vehicle_id, shift_id'),
       ]);
       setDrivers(driversList ?? []);
       const nextLocationMap: Record<string, DriverLocation> = {};
@@ -117,7 +119,7 @@ export function LiveMapPage() {
   const filteredLocations = useMemo(() => {
     return locationList.filter((loc) => {
       const driver = driverMap.get(loc.driver_id);
-      const driverName = (driver?.name ?? driver?.full_name ?? '').toLowerCase();
+      const driverName = (driver?.full_name ?? driver?.profile_email ?? driver?.email ?? '').toLowerCase();
       const matchesSearch = driverName.includes(searchQuery.toLowerCase());
       const status = statusMap[loc.driver_id];
       const online = isOnline(status);
@@ -126,7 +128,7 @@ export function LiveMapPage() {
       const matchesGps = !gpsOnly || isGpsRecent;
       const matchesVehicle =
         vehicleFilter === 'all' || status?.vehicle_id === vehicleFilter || loc.vehicle_id === vehicleFilter;
-      return matchesSearch && matchesOnline && matchesGps && matchesVehicle && isGpsRecent;
+      return matchesSearch && matchesOnline && matchesGps && matchesVehicle;
     });
   }, [locationList, driverMap, searchQuery, onlineOnly, gpsOnly, vehicleFilter, statusMap]);
 
@@ -177,7 +179,9 @@ export function LiveMapPage() {
     return makeModel ? `${rego} • ${makeModel}` : rego;
   };
 
-  const activeDrivers = filteredLocations.length;
+  const activeDrivers = filteredLocations.filter(
+    (location) => new Date(location.recorded_at) > new Date(Date.now() - 5 * 60 * 1000)
+  ).length;
 
   const handleRefresh = async () => {
     await refreshData();
@@ -320,7 +324,7 @@ export function LiveMapPage() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-lg font-semibold text-white">
-                      {selectedDriver?.name || selectedDriver?.full_name || 'Driver'}
+                      {selectedDriver?.full_name || selectedDriver?.profile_email || selectedDriver?.email || 'Driver'}
                     </p>
                     <p className="text-xs text-gray-400">
                       {selectedVehicle
@@ -409,9 +413,9 @@ export function LiveMapPage() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="min-w-0">
                             <p className="font-medium text-white truncate">
-                              {driver?.name || driver?.full_name || 'Unknown'}
+                              {driver?.full_name || driver?.profile_email || driver?.email || 'Unknown'}
                             </p>
-                            <p className="text-xs text-gray-400 truncate">{driver?.email}</p>
+                            <p className="text-xs text-gray-400 truncate">{driver?.profile_email || driver?.email}</p>
                           </div>
                           <Badge className="ml-2 flex-shrink-0 bg-green-950 text-green-400 border-green-900 text-xs">
                             <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1 animate-pulse" />

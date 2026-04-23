@@ -2,117 +2,85 @@
 import { supabase } from '../supabase';
 
 export interface Driver {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'inactive';
-  created_at: string;
-  updated_at: string;
+  driver_id: string;
+  full_name?: string | null;
+  profile_email?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status?: 'active' | 'inactive' | string | null;
+  auth_user_id?: string | null;
+  current_vehicle_id?: string | null;
+  current_vehicle_rego?: string | null;
 }
 
 export async function listDrivers(): Promise<Driver[]> {
-  console.info('listDrivers: query=drivers filters={}');
   const { data, error } = await supabase
-    .from('drivers')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .from('drivers_with_current_vehicle')
+    .select('driver_id, full_name, profile_email, email, phone, status, auth_user_id, current_vehicle_id, current_vehicle_rego')
+    .order('full_name');
 
-  if (error) {
-    console.warn('listDrivers: error=', error);
-    throw error;
-  }
-  console.info('listDrivers: result length=', data?.length ?? 0);
-  return data || [];
+  if (error) throw error;
+  return (data as Driver[]) || [];
 }
 
 export async function getDriver(id: string): Promise<Driver | null> {
-  console.info('getDriver: query=drivers filters=', { id });
   const { data, error } = await supabase
-    .from('drivers')
-    .select('*')
-    .eq('id', id)
-    .single();
+    .from('drivers_with_current_vehicle')
+    .select('driver_id, full_name, profile_email, email, phone, status, auth_user_id, current_vehicle_id, current_vehicle_rego')
+    .eq('driver_id', id)
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') {
-    console.warn('getDriver: error=', error);
-    throw error;
-  }
-  console.info('getDriver: found=', Boolean(data));
-  return data || null;
+  if (error) throw error;
+  return (data as Driver | null) ?? null;
 }
 
-export async function createDriver(driver: Omit<Driver, 'id' | 'created_at' | 'updated_at'>): Promise<Driver> {
-  console.info('createDriver: insert=drivers payload=', driver);
+export async function createDriver(driver: Record<string, unknown>): Promise<Driver> {
   const { data, error } = await supabase
     .from('drivers')
     .insert([driver])
-    .select()
+    .select('*')
     .single();
 
-  if (error) {
-    console.warn('createDriver: error=', error);
-    throw error;
-  }
-  console.info('createDriver: inserted id=', data?.id);
-  return data;
+  if (error) throw error;
+  return data as Driver;
 }
 
-export async function updateDriver(id: string, updates: Partial<Driver>): Promise<Driver> {
-  console.info('updateDriver: query=drivers filters=', { id }, 'updates=', updates);
+export async function updateDriver(id: string, updates: Record<string, unknown>): Promise<Driver> {
   const { data, error } = await supabase
     .from('drivers')
     .update(updates)
     .eq('id', id)
-    .select()
+    .select('*')
     .single();
 
-  if (error) {
-    console.warn('updateDriver: error=', error);
-    throw error;
-  }
-  console.info('updateDriver: updated id=', data?.id);
-  return data;
+  if (error) throw error;
+  return data as Driver;
 }
 
 export async function deleteDriver(id: string): Promise<void> {
-  console.info('deleteDriver: query=drivers filters=', { id });
   const { error } = await supabase
     .from('drivers')
     .delete()
     .eq('id', id);
 
-  if (error) {
-    console.warn('deleteDriver: error=', error);
-    throw error;
-  }
+  if (error) throw error;
 }
 
 export async function countActiveDrivers(): Promise<number> {
-  console.info('countActiveDrivers: query=drivers filters=', { status: 'active' });
   const { count, error } = await supabase
     .from('drivers')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'active');
 
-  if (error) {
-    console.warn('countActiveDrivers: error=', error);
-    throw error;
-  }
-  console.info('countActiveDrivers: count=', count ?? 0);
+  if (error) throw error;
   return count || 0;
 }
 
 export async function countTotalDrivers(): Promise<number> {
-  console.info('countTotalDrivers: query=drivers filters={}');
   const { count, error } = await supabase
     .from('drivers')
     .select('*', { count: 'exact', head: true });
 
-  if (error) {
-    console.warn('countTotalDrivers: error=', error);
-    throw error;
-  }
-  console.info('countTotalDrivers: count=', count ?? 0);
+  if (error) throw error;
   return count || 0;
 }

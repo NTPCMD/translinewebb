@@ -15,36 +15,81 @@ export interface Shift {
   vehicle_rego?: string | null;
 }
 
-export async function listShifts(): Promise<Shift[]> {
-  const { data, error } = await supabase
+type ShiftRow = {
+  id: string;
+  driver_id: string;
+  vehicle_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  status: 'active' | 'ended' | 'cancelled';
+  checklist?: Record<string, ShiftChecklistValue> | null;
+};
+
+async function enrichShiftRows(rows: ShiftRow[]): Promise<Shift[]> {
+  const driverIds = Array.from(new Set(rows.map((row) => row.driver_id).filter(Boolean)));
+  const vehicleIds = Array.from(new Set(rows.map((row) => row.vehicle_id).filter(Boolean))) as string[];
+
+  const [driversResponse, vehiclesResponse] = await Promise.all([
+    driverIds.length > 0
+      ? supabase
+          .from('drivers_with_current_vehicle')
+          .select('driver_id, full_name')
+          .in('driver_id', driverIds)
+      : Promise.resolve({ data: [], error: null }),
+    vehicleIds.length > 0
+      ? supabase.from('vehicles').select('id, rego').in('id', vehicleIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (driversResponse.error) throw driversResponse.error;
+  if (vehiclesResponse.error) throw vehiclesResponse.error;
+
+  const driverNameById = new Map((driversResponse.data ?? []).map((row) => [row.driver_id, row.full_name]));
+  const vehicleRegoById = new Map((vehiclesResponse.data ?? []).map((row) => [row.id, row.rego]));
+
+  return rows.map((row) => ({
+    ...row,
+    driver_name: row.driver_id ? driverNameById.get(row.driver_id) ?? null : null,
+    vehicle_rego: row.vehicle_id ? vehicleRegoById.get(row.vehicle_id) ?? null : null,
+  }));
+}
+
+async function fetchShifts(options?: { onlyActive?: boolean }): Promise<Shift[]> {
+  let query = supabase
     .from('shifts')
-    .select('*')
+    .select('id, driver_id, vehicle_id, started_at, ended_at, status, checklist')
     .order('started_at', { ascending: false });
 
+  if (options?.onlyActive) {
+    query = query.or('status.eq.active,ended_at.is.null');
+  }
+
+  const { data, error } = await query;
+
   if (error) throw error;
-  return data || [];
+  return enrichShiftRows((data as ShiftRow[]) ?? []);
+}
+
+export async function listShifts(): Promise<Shift[]> {
+  return fetchShifts();
 }
 
 export async function listActiveShifts(): Promise<Shift[]> {
-  const { data, error } = await supabase
-    .from('shifts')
-    .select('*')
-    .or('status.eq.active,ended_at.is.null')
-    .order('started_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  return fetchShifts({ onlyActive: true });
 }
 
 export async function getShift(id: string): Promise<Shift | null> {
   const { data, error } = await supabase
     .from('shifts')
-    .select('*')
+    .select('id, driver_id, vehicle_id, started_at, ended_at, status, checklist')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') throw error;
-  return data || null;
+  if (error) throw error;
+  if (!data) return null;
+
+  const [enriched] = await enrichShiftRows([data as ShiftRow]);
+  return enriched ?? null;
 }
 
 export async function createShift(shift: Omit<Shift, 'id' | 'created_at' | 'updated_at'>): Promise<Shift> {

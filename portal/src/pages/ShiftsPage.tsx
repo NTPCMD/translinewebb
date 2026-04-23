@@ -74,10 +74,23 @@ export function ShiftsPage() {
   }, [fetchShifts]);
 
   const normalizedQuery = searchQuery.toLowerCase();
+  const getDriverDisplay = (shift: Shift) => {
+    if (shift.driver_name) return shift.driver_name;
+    if (shift.driver_id) return `Missing driver record (${shift.driver_id.slice(0, 8)}...)`;
+    return 'No driver linked';
+  };
+  const getVehicleDisplay = (shift: Shift) => {
+    if (shift.vehicle_rego) return shift.vehicle_rego;
+    if (shift.vehicle_id) return `Missing vehicle record (${shift.vehicle_id.slice(0, 8)}...)`;
+    return 'No vehicle linked';
+  };
+
   const filteredShifts = shifts.filter((shift) => {
     const matchesSearch =
-      (shift.driver_name ?? '').toLowerCase().includes(normalizedQuery) ||
-      (shift.vehicle_rego ?? '').toLowerCase().includes(normalizedQuery);
+      getDriverDisplay(shift).toLowerCase().includes(normalizedQuery) ||
+      getVehicleDisplay(shift).toLowerCase().includes(normalizedQuery) ||
+      shift.driver_id.toLowerCase().includes(normalizedQuery) ||
+      (shift.vehicle_id ?? '').toLowerCase().includes(normalizedQuery);
     const matchesStatus = filterStatus === 'all' || shift.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -219,10 +232,10 @@ export function ShiftsPage() {
                       return (
                         <TableRow key={shift.id} className="border-gray-800 align-top">
                           <TableCell className="font-medium text-white">
-                            {shift.driver_name ?? '—'}
+                            {getDriverDisplay(shift)}
                           </TableCell>
                           <TableCell className="text-gray-300">
-                            {shift.vehicle_rego ?? '—'}
+                            {getVehicleDisplay(shift)}
                           </TableCell>
                           <TableCell className="text-gray-300">
                             <div className="flex items-center gap-2">
@@ -308,7 +321,7 @@ export function ShiftsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">End Shift</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to end the shift for {selectedShift?.driver_name}? This action cannot be undone.
+              Are you sure you want to end the shift for {selectedShift ? getDriverDisplay(selectedShift) : 'this driver'}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

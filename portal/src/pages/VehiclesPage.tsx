@@ -17,15 +17,14 @@ import {
 } from '@/app/components/ui/alert-dialog';
 import { Search, Plus, Eye, Trash2, Loader } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { listVehicles as listVehiclesWithAssignments, type Vehicle as DbVehicle } from '@/lib/db/vehicles';
 
 interface Vehicle {
-  vehicle_id?: string;
   id: string;
   rego: string;
   make: string | null;
   model: string | null;
   status: string;
-  is_active: boolean;
   driver_name?: string | null;
   driver_id?: string | null;
 }
@@ -60,7 +59,7 @@ export function VehiclesPage() {
     loadPage();
   }, []);
 
-  const resolveVehicleId = (vehicle: Vehicle | null) => vehicle?.vehicle_id ?? vehicle?.id ?? '';
+  const resolveVehicleId = (vehicle: Vehicle | null) => vehicle?.id ?? '';
 
   const applyVehicleState = (vehiclesData: Vehicle[]) => {
     setVehicles(vehiclesData);
@@ -70,17 +69,21 @@ export function VehiclesPage() {
   };
 
   async function fetchVehicles() {
-    const { data, error } = await supabase
-      .from('vehicles_with_driver')
-      .select('*')
-      .order('rego');
-
-    if (error) {
+    try {
+      const vehicles = await listVehiclesWithAssignments();
+      return (vehicles as DbVehicle[]).map((vehicle) => ({
+        id: vehicle.id,
+        rego: vehicle.rego,
+        make: vehicle.make,
+        model: vehicle.model,
+        status: vehicle.status,
+        driver_id: vehicle.driver_id ?? null,
+        driver_name: vehicle.driver_name ?? null,
+      }));
+    } catch (error) {
       console.error('fetchVehicles error:', error);
       return [];
     }
-
-    return data ?? [];
   }
 
   async function fetchDrivers() {

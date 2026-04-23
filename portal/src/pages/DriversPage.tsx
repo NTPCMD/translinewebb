@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Search, UserPlus, Trash2, Loader, Eye, Key } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceStrict, formatDistanceToNow } from 'date-fns';
 
 type ShiftRow = {
   id: string;
@@ -70,10 +70,15 @@ export function DriversPage() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDriver, setPasswordDriver] = useState<DriverRow | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [durationNow, setDurationNow] = useState(() => Date.now());
   const resolveDriverId = (driver: DriverRow) =>
     driver.driver_id ?? driver.id ?? driver.auth_user_id;
-  const isOnline = (status?: DriverLiveStatus) =>
-    isOnlineFromLastSeen(status?.last_seen_at) || Boolean(status?.is_online);
+  const getShiftDurationLabel = (shift?: ShiftRow) => {
+    if (!shift?.started_at) return 'No active shift';
+    const startedAt = new Date(shift.started_at);
+    if (Number.isNaN(startedAt.getTime())) return 'No active shift';
+    return formatDistanceStrict(startedAt, durationNow, { roundingMethod: 'floor' });
+  };
 
   async function fetchDrivers() {
     const { data, error: driversError } = await supabase
@@ -164,8 +169,13 @@ export function DriversPage() {
       const [driversData, vehiclesData, statusResponse, shiftsResponse] = await Promise.all([
         fetchDrivers(),
         fetchVehicles(),
-        supabase.from('view_driver_current_status').select('*'),
-        supabase.from('shifts').select('*').or('status.eq.active,ended_at.is.null'),
+        supabase
+          .from('view_driver_current_status')
+          .select('driver_id, last_seen_at, is_online, status_state, on_break, status_started_at, last_location_at, lat, lng, speed_kmh, heading, vehicle_id, shift_id'),
+        supabase
+          .from('shifts')
+          .select('id, driver_id, vehicle_id, started_at, ended_at, status')
+          .or('status.eq.active,ended_at.is.null'),
       ]);
 
       setDrivers(driversData as DriverRow[]);
@@ -203,6 +213,14 @@ export function DriversPage() {
     loadPage();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setDurationNow(Date.now());
+    }, 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const filteredDrivers = drivers.filter(
     (driver) =>
       (driver.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -214,16 +232,21 @@ export function DriversPage() {
     return [...filteredDrivers].sort((a, b) => {
       const aId = resolveDriverId(a);
       const bId = resolveDriverId(b);
-      const aStatus = aId ? statusMap[aId] : undefined;
-      const bStatus = bId ? statusMap[bId] : undefined;
-      const aOnline = isOnline(aStatus) ? 1 : 0;
-      const bOnline = isOnline(bStatus) ? 1 : 0;
-      if (aOnline !== bOnline) return bOnline - aOnline;
-      const aLastSeen = aStatus?.last_seen_at ? new Date(aStatus.last_seen_at).getTime() : 0;
-      const bLastSeen = bStatus?.last_seen_at ? new Date(bStatus.last_seen_at).getTime() : 0;
-      return bLastSeen - aLastSeen;
+      const aShift = aId ? activeShiftMap[aId] : undefined;
+      const bShift = bId ? activeShiftMap[bId] : undefined;
+      const aActive = aShift ? 1 : 0;
+      const bActive = bShift ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+
+      const aStartedAt = aShift?.started_at ? new Date(aShift.started_at).getTime() : 0;
+      const bStartedAt = bShift?.started_at ? new Date(bShift.started_at).getTime() : 0;
+      if (aStartedAt !== bStartedAt) return bStartedAt - aStartedAt;
+
+      return (a.full_name ?? a.profile_email ?? a.email ?? '').localeCompare(
+        b.full_name ?? b.profile_email ?? b.email ?? ''
+      );
     });
-  }, [filteredDrivers, resolveDriverId, statusMap]);
+  }, [filteredDrivers, resolveDriverId, activeShiftMap]);
 
   // Add driver via Supabase Auth (creates profile automatically)
   const handleAddDriver = async () => {
@@ -414,7 +437,7 @@ export function DriversPage() {
             <div>
               <CardTitle className="text-white">All Drivers</CardTitle>
               <CardDescription className="text-gray-400">
-                View and manage driver information
+                Shift duration is calculated from active shift start time.
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
@@ -440,8 +463,7 @@ export function DriversPage() {
                 <TableHeader>
                   <TableRow className="border-gray-800 hover:bg-transparent">
                     <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Online</TableHead>
-                    <TableHead className="text-gray-400">Last Seen</TableHead>
+                    <TableHead className="text-gray-400">Shift Duration</TableHead>
                     <TableHead className="text-gray-400">Status</TableHead>
                     <TableHead className="text-gray-400">Break</TableHead>
                     <TableHead className="text-gray-400">Current Vehicle</TableHead>
@@ -453,7 +475,7 @@ export function DriversPage() {
                 <TableBody>
                   {sortedDrivers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                         No drivers found
                       </TableCell>
                     </TableRow>
@@ -471,17 +493,8 @@ export function DriversPage() {
                                 <p className="text-xs text-gray-500">{driver.profile_email ?? driver.email}</p>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              {isOnline(status) ? (
-                                <Badge className="bg-green-950 text-green-400 border-green-900">Online</Badge>
-                              ) : (
-                                <Badge className="bg-gray-900 text-gray-300 border-gray-700">Offline</Badge>
-                              )}
-                            </TableCell>
                             <TableCell className="text-gray-300">
-                              {status?.last_seen_at
-                                ? formatDistanceToNow(new Date(status.last_seen_at), { addSuffix: true })
-                                : 'Never'}
+                              {getShiftDurationLabel(activeShift)}
                             </TableCell>
                             <TableCell>
                               {status?.status_state ? (
