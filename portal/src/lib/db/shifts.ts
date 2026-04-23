@@ -1,6 +1,8 @@
 // Shifts data access layer
 import { supabase } from '../supabase';
 
+export type ShiftChecklistValue = 'pass' | 'fail' | null;
+
 export interface Shift {
   id: string;
   driver_id: string;
@@ -8,6 +10,9 @@ export interface Shift {
   started_at: string;
   ended_at: string | null;
   status: 'active' | 'ended' | 'cancelled';
+  checklist?: Record<string, ShiftChecklistValue> | null;
+  driver_name?: string | null;
+  vehicle_rego?: string | null;
 }
 
 export async function listShifts(): Promise<Shift[]> {

@@ -11,12 +11,18 @@ import { format } from 'date-fns';
 import { listShifts, Shift, countActiveShifts, countTodayShifts } from '@/lib/db/shifts';
 import { supabase } from '@/lib/supabase';
 
+const formatChecklistLabel = (key: string) =>
+  key
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 export function ShiftsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'ended'>('all');
   const [activeCount, setActiveCount] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
@@ -163,7 +169,7 @@ export function ShiftsPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {(['all', 'active', 'completed'] as const).map((status) => (
+              {(['all', 'active', 'ended'] as const).map((status) => (
                 <Button
                   key={status}
                   variant={filterStatus === status ? 'default' : 'outline'}
@@ -195,68 +201,100 @@ export function ShiftsPage() {
                     <TableHead className="text-gray-400">Start Time</TableHead>
                     <TableHead className="text-gray-400">End Time</TableHead>
                     <TableHead className="text-gray-400">Status</TableHead>
+                    <TableHead className="text-gray-400">Checklist</TableHead>
                     <TableHead className="text-gray-400 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredShifts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         No shifts found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredShifts.map((shift) => (
-                      <TableRow key={shift.id} className="border-gray-800">
-                        <TableCell className="font-medium text-white">
-                          {shift.driver_name ?? '—'}
-                        </TableCell>
-                        <TableCell className="text-gray-300">
-                          {shift.vehicle_rego ?? '—'}
-                        </TableCell>
-                        <TableCell className="text-gray-300">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-500" />
-                            {shift.started_at
-                              ? format(new Date(shift.started_at), 'MMM dd, HH:mm')
-                              : '—'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-gray-300">
-                          {shift.ended_at
-                            ? format(new Date(shift.ended_at), 'MMM dd, HH:mm')
-                            : <span className="text-yellow-400">In progress</span>}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              shift.status === 'active'
-                                ? 'bg-green-950 text-green-400 border-green-900'
-                                : 'bg-gray-800 text-gray-400 border-gray-700'
-                            }
-                          >
-                            {shift.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            {shift.status === 'active' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-gray-400 hover:text-red-400 h-8 px-2 text-xs"
-                                onClick={() => {
-                                  setSelectedShift(shift);
-                                  setEndShiftDialog(true);
-                                }}
-                              >
-                                End Shift
-                              </Button>
+                    filteredShifts.map((shift) => {
+                      const checklistEntries = Object.entries(shift.checklist ?? {});
+
+                      return (
+                        <TableRow key={shift.id} className="border-gray-800 align-top">
+                          <TableCell className="font-medium text-white">
+                            {shift.driver_name ?? '—'}
+                          </TableCell>
+                          <TableCell className="text-gray-300">
+                            {shift.vehicle_rego ?? '—'}
+                          </TableCell>
+                          <TableCell className="text-gray-300">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-gray-500" />
+                              {shift.started_at
+                                ? format(new Date(shift.started_at), 'MMM dd, HH:mm')
+                                : '—'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-gray-300">
+                            {shift.ended_at
+                              ? format(new Date(shift.ended_at), 'MMM dd, HH:mm')
+                              : <span className="text-yellow-400">In progress</span>}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                shift.status === 'active'
+                                  ? 'bg-green-950 text-green-400 border-green-900'
+                                  : 'bg-gray-800 text-gray-400 border-gray-700'
+                              }
+                            >
+                              {shift.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="min-w-[280px]">
+                            {checklistEntries.length === 0 ? (
+                              <span className="text-sm text-gray-500">No checklist saved</span>
+                            ) : (
+                              <div className="space-y-1">
+                                {checklistEntries.map(([key, value]) => (
+                                  <div
+                                    key={`${shift.id}-${key}`}
+                                    className="flex items-center justify-between gap-3 rounded bg-[#0F0F0F] px-2 py-1 text-xs"
+                                  >
+                                    <span className="text-gray-400">{formatChecklistLabel(key)}</span>
+                                    <span
+                                      className={
+                                        value === 'fail'
+                                          ? 'font-medium text-red-400'
+                                          : value === 'pass'
+                                            ? 'font-medium text-green-400'
+                                            : 'text-yellow-400'
+                                      }
+                                    >
+                                      {value == null ? 'pending' : String(value)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-2">
+                              {shift.status === 'active' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-400 hover:text-red-400 h-8 px-2 text-xs"
+                                  onClick={() => {
+                                    setSelectedShift(shift);
+                                    setEndShiftDialog(true);
+                                  }}
+                                >
+                                  End Shift
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

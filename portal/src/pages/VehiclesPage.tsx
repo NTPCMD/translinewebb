@@ -6,11 +6,20 @@ import { Input } from '@/app/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/app/components/ui/alert-dialog';
 import { Search, Plus, Eye, Trash2, Loader } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Vehicle {
+  vehicle_id?: string;
   id: string;
   rego: string;
   make: string | null;
@@ -25,9 +34,6 @@ interface Driver {
   driver_id: string;
   full_name: string;
 }
-
-const countVehiclesByStatus = (rows: Vehicle[], status: string) =>
-  rows.filter((vehicle) => vehicle.status === status).length;
 
 export function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,6 +59,15 @@ export function VehiclesPage() {
   useEffect(() => {
     loadPage();
   }, []);
+
+  const resolveVehicleId = (vehicle: Vehicle | null) => vehicle?.vehicle_id ?? vehicle?.id ?? '';
+
+  const applyVehicleState = (vehiclesData: Vehicle[]) => {
+    setVehicles(vehiclesData);
+    setTotalCount(vehiclesData.length);
+    setActiveCount(vehiclesData.filter((v) => v.status === 'active').length);
+    setMaintenanceCount(vehiclesData.filter((v) => v.status === 'maintenance').length);
+  };
 
   async function fetchVehicles() {
     const { data, error } = await supabase
@@ -90,11 +105,8 @@ export function VehiclesPage() {
         fetchDrivers(),
       ]);
 
-      setVehicles(vehiclesData as Vehicle[]);
+      applyVehicleState(vehiclesData as Vehicle[]);
       setDrivers(driversData as Driver[]);
-      setTotalCount(vehiclesData.length);
-      setActiveCount(countVehiclesByStatus(vehiclesData as Vehicle[], 'active'));
-      setMaintenanceCount(countVehiclesByStatus(vehiclesData as Vehicle[], 'maintenance'));
       setError(null);
     } catch (err: any) {
       setError('Failed to load vehicles');
@@ -143,10 +155,7 @@ export function VehiclesPage() {
       setFormData({ rego: '', make: '', model: '', status: 'active' });
       setError(null);
       const updatedVehicles = await fetchVehicles();
-      setVehicles(updatedVehicles as Vehicle[]);
-      setTotalCount(updatedVehicles.length);
-      setActiveCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'active'));
-      setMaintenanceCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'maintenance'));
+      applyVehicleState(updatedVehicles as Vehicle[]);
     } catch (err: any) {
       setError(err.message || 'Failed to create vehicle');
       console.error(err);
@@ -155,11 +164,18 @@ export function VehiclesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedVehicle) return;
+
+    const vehicleId = resolveVehicleId(selectedVehicle);
+    if (!vehicleId) {
+      setError('Missing vehicle id');
+      return;
+    }
+
     try {
       const { error: delError } = await supabase
         .from('vehicles')
         .delete()
-        .eq('id', selectedVehicle.id);
+        .eq('id', vehicleId);
 
       if (delError) throw delError;
 
@@ -167,10 +183,7 @@ export function VehiclesPage() {
       setSelectedVehicle(null);
       setError(null);
       const updatedVehicles = await fetchVehicles();
-      setVehicles(updatedVehicles as Vehicle[]);
-      setTotalCount(updatedVehicles.length);
-      setActiveCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'active'));
-      setMaintenanceCount(countVehiclesByStatus(updatedVehicles as Vehicle[], 'maintenance'));
+      applyVehicleState(updatedVehicles as Vehicle[]);
     } catch (err: any) {
       setError('Failed to delete vehicle');
       console.error(err);
@@ -186,11 +199,17 @@ export function VehiclesPage() {
   async function saveVehicleAssignment() {
     if (!selectedVehicle) return;
 
+    const vehicleId = resolveVehicleId(selectedVehicle);
+    if (!vehicleId) {
+      alert('Missing vehicle id');
+      return;
+    }
+
     try {
       if (!selectedDriverId) {
         const { error } = await supabase.rpc('assign_vehicle', {
           p_driver: null,
-          p_vehicle: selectedVehicle.id,
+          p_vehicle: vehicleId,
         });
 
         if (error) {
@@ -199,10 +218,9 @@ export function VehiclesPage() {
           return;
         }
       } else {
-        // assign (reuse same RPC)
         const { error } = await supabase.rpc('assign_vehicle', {
           p_driver: selectedDriverId,
-          p_vehicle: selectedVehicle.id,
+          p_vehicle: vehicleId,
         });
 
         if (error) {
@@ -213,7 +231,7 @@ export function VehiclesPage() {
       }
 
       const refreshedVehicles = await fetchVehicles();
-      setVehicles(refreshedVehicles as Vehicle[]);
+      applyVehicleState(refreshedVehicles as Vehicle[]);
 
       setIsAssignModalOpen(false);
       setSelectedVehicle(null);
@@ -281,7 +299,7 @@ export function VehiclesPage() {
                 type="search"
                 placeholder="Search vehicles..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-[#0F0F0F] border-gray-700 text-white placeholder:text-gray-500"
               />
             </div>
@@ -359,7 +377,7 @@ export function VehiclesPage() {
       </Card>
 
       {/* Add Vehicle Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setFormData({ rego: '', make: '', model: '', status: 'active' }); }}>
+      <Dialog open={dialogOpen} onOpenChange={(open: boolean) => { setDialogOpen(open); if (!open) setFormData({ rego: '', make: '', model: '', status: 'active' }); }}>
         <DialogContent className="bg-[#161616] border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-white">Add Vehicle</DialogTitle>
@@ -370,7 +388,7 @@ export function VehiclesPage() {
               <Label className="text-gray-300">Rego <span className="text-red-400">*</span></Label>
               <Input
                 value={formData.rego}
-                onChange={(e) => setFormData({ ...formData, rego: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, rego: e.target.value })}
                 placeholder="ABC123"
                 className="bg-[#0F0F0F] border-gray-700 text-white"
               />
@@ -379,7 +397,7 @@ export function VehiclesPage() {
               <Label className="text-gray-300">Make</Label>
               <Input
                 value={formData.make}
-                onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, make: e.target.value })}
                 placeholder="Ford"
                 className="bg-[#0F0F0F] border-gray-700 text-white"
               />
@@ -388,7 +406,7 @@ export function VehiclesPage() {
               <Label className="text-gray-300">Model</Label>
               <Input
                 value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, model: e.target.value })}
                 placeholder="Transit"
                 className="bg-[#0F0F0F] border-gray-700 text-white"
               />
@@ -414,7 +432,7 @@ export function VehiclesPage() {
               <Label className="text-gray-300">Driver</Label>
               <select
                 value={String(selectedDriverId || '')}
-                onChange={(e) => setSelectedDriverId(String(e.target.value))}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(String(e.target.value))}
                 className="w-full bg-[#0F0F0F] border border-gray-700 text-white p-2 rounded"
               >
                 <option value="">Unassigned</option>
