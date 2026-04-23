@@ -138,6 +138,32 @@ export async function countActiveShifts(): Promise<number> {
   return count || 0;
 }
 
+export async function countDistinctDriversOnActiveShifts(): Promise<number> {
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('driver_id')
+    .or('status.eq.active,ended_at.is.null')
+    .not('driver_id', 'is', null);
+
+  if (error) throw error;
+
+  const uniqueDriverIds = new Set((data ?? []).map((row) => row.driver_id as string));
+  return uniqueDriverIds.size;
+}
+
+export async function countDistinctVehiclesOnActiveShifts(): Promise<number> {
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('vehicle_id')
+    .or('status.eq.active,ended_at.is.null')
+    .not('vehicle_id', 'is', null);
+
+  if (error) throw error;
+
+  const uniqueVehicleIds = new Set((data ?? []).map((row) => row.vehicle_id as string));
+  return uniqueVehicleIds.size;
+}
+
 export async function countTodayShifts(): Promise<number> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

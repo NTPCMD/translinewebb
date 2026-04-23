@@ -23,6 +23,12 @@ type ShiftRow = {
   status: 'active' | 'ended' | 'cancelled';
 };
 
+type ShiftBreakEventRow = {
+  shift_id: string;
+  event_type: 'break_start' | 'break_end';
+  created_at: string;
+};
+
 type VehicleOption = {
   id: string;
   rego: string;
@@ -64,6 +70,7 @@ export function DriversPage() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const { statusMap, setStatusMap } = useDriverLiveState();
   const [activeShiftMap, setActiveShiftMap] = useState<Record<string, ShiftRow>>({});
+  const [breakByShiftId, setBreakByShiftId] = useState<Record<string, boolean>>({});
   const [selectedDriver, setSelectedDriver] = useState<DriverRow | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
@@ -199,6 +206,28 @@ export function DriversPage() {
         nextShiftMap[row.driver_id] = row;
       });
       setActiveShiftMap(nextShiftMap);
+
+      const shiftIds = activeShiftRows.map((row) => row.id);
+      const nextBreakByShiftId: Record<string, boolean> = {};
+      if (shiftIds.length > 0) {
+        const { data: breakEventsData, error: breakEventsError } = await supabase
+          .from('shift_events')
+          .select('shift_id, event_type, created_at')
+          .in('shift_id', shiftIds)
+          .in('event_type', ['break_start', 'break_end'])
+          .order('created_at', { ascending: false });
+
+        if (breakEventsError) {
+          console.error('fetch shift_events break status error:', breakEventsError);
+        } else {
+          ((breakEventsData as ShiftBreakEventRow[]) ?? []).forEach((event) => {
+            if (nextBreakByShiftId[event.shift_id] === undefined) {
+              nextBreakByShiftId[event.shift_id] = event.event_type === 'break_start';
+            }
+          });
+        }
+      }
+      setBreakByShiftId(nextBreakByShiftId);
       setError(null);
     } catch (err) {
       setError('Failed to load drivers or vehicles');
@@ -485,6 +514,7 @@ export function DriversPage() {
                         const driverId = resolveDriverId(driver);
                         const status = driverId ? statusMap[driverId] : undefined;
                         const activeShift = driverId ? activeShiftMap[driverId] : undefined;
+                        const isOnBreak = activeShift ? Boolean(breakByShiftId[activeShift.id]) : false;
                         return (
                           <TableRow key={driver.driver_id ?? driverId} className="border-gray-800">
                             <TableCell className="font-medium text-white">
@@ -506,7 +536,7 @@ export function DriversPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {status?.on_break ? (
+                              {isOnBreak ? (
                                 <Badge className="bg-amber-950 text-amber-300 border-amber-800">On Break</Badge>
                               ) : (
                                 <Badge className="bg-gray-900 text-gray-300 border-gray-700">No</Badge>
