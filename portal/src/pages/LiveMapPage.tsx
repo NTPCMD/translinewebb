@@ -13,6 +13,12 @@ import { listVehicles, Vehicle } from '@/lib/db/vehicles';
 import { supabase } from '@/lib/supabase';
 import { useDriverLiveState, isOnlineFromLastSeen, type DriverLiveStatus } from '@/lib/realtime/useDriverLiveState';
 
+type DriverCurrentStatusRow = {
+  driver_id: string;
+  status: string | null;
+  shift_id: string | null;
+};
+
 const DEFAULT_CENTER: [number, number] = [37.7749, -122.4194];
 
 export function LiveMapPage() {
@@ -59,7 +65,7 @@ export function LiveMapPage() {
         listVehicles(),
         supabase
           .from('view_driver_current_status')
-          .select('driver_id, last_seen_at, is_online, status_state, on_break, status_started_at, last_location_at, lat, lng, speed_kmh, heading, vehicle_id, shift_id'),
+          .select('driver_id, status, shift_id'),
       ]);
       setDrivers(driversList ?? []);
       const nextLocationMap: Record<string, DriverLocation> = {};
@@ -68,12 +74,23 @@ export function LiveMapPage() {
       });
       setLocationMap(nextLocationMap);
       setVehicles(vehiclesList ?? []);
-      const statusRows = (statusList.data as DriverLiveStatus[]) ?? [];
+      const statusRows = (statusList.data as DriverCurrentStatusRow[]) ?? [];
       const nextStatusMap: Record<string, DriverLiveStatus> = {};
       statusRows.forEach((row) => {
         nextStatusMap[row.driver_id] = {
-          ...row,
-          is_online: isOnlineFromLastSeen(row.last_seen_at),
+          driver_id: row.driver_id,
+          last_seen_at: null,
+          is_online: false,
+          status_state: row.status ?? null,
+          on_break: null,
+          status_started_at: null,
+          last_location_at: null,
+          lat: null,
+          lng: null,
+          speed_kmh: null,
+          heading: null,
+          vehicle_id: null,
+          shift_id: row.shift_id ?? null,
         };
       });
       setStatusMap(nextStatusMap);

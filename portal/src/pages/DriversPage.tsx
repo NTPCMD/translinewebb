@@ -29,6 +29,12 @@ type ShiftBreakEventRow = {
   created_at: string;
 };
 
+type DriverCurrentStatusRow = {
+  driver_id: string;
+  status: string | null;
+  shift_id: string | null;
+};
+
 type VehicleOption = {
   id: string;
   rego: string;
@@ -178,7 +184,7 @@ export function DriversPage() {
         fetchVehicles(),
         supabase
           .from('view_driver_current_status')
-          .select('driver_id, last_seen_at, is_online, status_state, on_break, status_started_at, last_location_at, lat, lng, speed_kmh, heading, vehicle_id, shift_id'),
+          .select('driver_id, status, shift_id'),
         supabase
           .from('shifts')
           .select('id, driver_id, vehicle_id, started_at, ended_at, status')
@@ -190,12 +196,23 @@ export function DriversPage() {
       setTotalCount(driversData.length);
       setActiveCount(countDriversByStatus(driversData as DriverRow[], 'active'));
 
-      const statusRows = (statusResponse.data as DriverLiveStatus[]) ?? [];
+      const statusRows = (statusResponse.data as DriverCurrentStatusRow[]) ?? [];
       const nextStatusMap: Record<string, DriverLiveStatus> = {};
       statusRows.forEach((row) => {
         nextStatusMap[row.driver_id] = {
-          ...row,
-          is_online: isOnlineFromLastSeen(row.last_seen_at),
+          driver_id: row.driver_id,
+          last_seen_at: null,
+          is_online: false,
+          status_state: row.status ?? null,
+          on_break: null,
+          status_started_at: null,
+          last_location_at: null,
+          lat: null,
+          lng: null,
+          speed_kmh: null,
+          heading: null,
+          vehicle_id: null,
+          shift_id: row.shift_id ?? null,
         };
       });
       setStatusMap(nextStatusMap);

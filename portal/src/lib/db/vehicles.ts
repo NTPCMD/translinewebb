@@ -13,7 +13,7 @@ export interface Vehicle {
   status: 'active' | 'maintenance' | 'inactive';
   last_inspection_date?: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at?: string | null;
 }
 
 type VehicleAssignmentRow = {
@@ -26,7 +26,7 @@ async function listVehiclesWithDriver(): Promise<Vehicle[]> {
   const [vehiclesResponse, assignmentsResponse] = await Promise.all([
     supabase
       .from('vehicles')
-      .select('id, rego, make, model, status, last_inspection_date, created_at, updated_at')
+      .select('id, rego, make, model, status, created_at')
       .order('rego'),
     supabase.from('vehicles_with_driver').select('vehicle_id, driver_id, driver_name'),
   ]);
@@ -42,6 +42,8 @@ async function listVehiclesWithDriver(): Promise<Vehicle[]> {
     const assignment = assignmentByVehicleId.get(vehicle.id);
     return {
       ...vehicle,
+      last_inspection_date: null,
+      updated_at: null,
       plate_number: vehicle.rego,
       driver_id: assignment?.driver_id ?? null,
       driver_name: assignment?.driver_name ?? null,

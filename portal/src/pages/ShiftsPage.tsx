@@ -5,6 +5,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/app/components/ui/alert-dialog';
 import { Search, Clock, Loader } from 'lucide-react';
 import { format } from 'date-fns';
@@ -17,6 +18,299 @@ const formatChecklistLabel = (key: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+type ShiftEvent = {
+  id?: string;
+  shift_id: string;
+  event_type: string;
+  created_at: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+type TimelineItem = {
+  id: string;
+  eventType: string;
+  label: string;
+  timestamp: string;
+  details?: string;
+};
+
+type ChecklistDisplayStatus = 'pass' | 'fail' | 'pending';
+
+type ChecklistDisplayItem = {
+  key: string;
+  label: string;
+  status: ChecklistDisplayStatus;
+  statusLabel: string;
+  valueLabel: string | null;
+  notes: string | null;
+};
+
+type ChecklistSummary = {
+  total: number;
+  pass: number;
+  fail: number;
+  pending: number;
+};
+
+type BreakSummary = {
+  allowanceSeconds: number;
+  usedSeconds: number;
+  remainingSeconds: number;
+  isOnBreak: boolean;
+  latestBreakAt: string | null;
+};
+
+const BREAK_ALLOWANCE_SECONDS = 30 * 60;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const formatTimestamp = (value?: string | null) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return format(date, 'MMM dd, yyyy HH:mm:ss');
+};
+
+const formatDurationSeconds = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds < 0) return null;
+  const total = Math.floor(seconds);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+};
+
+const toDisplayText = (value: unknown): string | null => {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map((entry) => toDisplayText(entry)).filter(Boolean) as string[];
+    return parts.length > 0 ? parts.join(', ') : null;
+  }
+  if (isRecord(value)) {
+    const preview = Object.entries(value)
+      .slice(0, 3)
+      .map(([k, v]) => `${formatChecklistLabel(k)}: ${toDisplayText(v) ?? 'Not recorded'}`)
+      .join(' | ');
+    return preview || null;
+  }
+  return null;
+};
+
+const parseChecklistStatus = (value: unknown): ChecklistDisplayStatus => {
+  if (value == null) return 'pending';
+  if (typeof value === 'boolean') return value ? 'pass' : 'fail';
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['pass', 'passed', 'ok', 'true', 'yes'].includes(normalized)) return 'pass';
+    if (['fail', 'failed', 'false', 'no'].includes(normalized)) return 'fail';
+  }
+  return 'pending';
+};
+
+const getChecklistItem = (key: string, rawValue: unknown): ChecklistDisplayItem => {
+  const label = formatChecklistLabel(key);
+
+  if (!isRecord(rawValue)) {
+    const status = parseChecklistStatus(rawValue);
+    return {
+      key,
+      label,
+      status,
+      statusLabel: status === 'pass' ? 'Pass' : status === 'fail' ? 'Fail' : 'Pending',
+      valueLabel: status === 'pending' ? toDisplayText(rawValue) ?? 'Not recorded' : null,
+      notes: null,
+    };
+  }
+
+  const statusCandidate = rawValue.status ?? rawValue.result ?? rawValue.outcome ?? rawValue.state ?? rawValue.pass;
+  const valueCandidate = rawValue.value ?? rawValue.reading ?? rawValue.answer ?? rawValue.level;
+  const notesCandidate = rawValue.notes ?? rawValue.note ?? rawValue.comment ?? rawValue.details;
+  const status = parseChecklistStatus(statusCandidate);
+
+  return {
+    key,
+    label,
+    status,
+    statusLabel: status === 'pass' ? 'Pass' : status === 'fail' ? 'Fail' : 'Pending',
+    valueLabel: toDisplayText(valueCandidate) ?? (status === 'pending' ? 'Not recorded' : null),
+    notes: toDisplayText(notesCandidate),
+  };
+};
+
+const normalizeChecklist = (checklist: Shift['checklist'] | null | undefined): ChecklistDisplayItem[] => {
+  if (!isRecord(checklist)) return [];
+  return Object.entries(checklist).map(([key, value]) => getChecklistItem(key, value));
+};
+
+const getChecklistSummary = (items: ChecklistDisplayItem[] | null | undefined): ChecklistSummary => {
+  const safeItems = Array.isArray(items) ? items : [];
+
+  if (safeItems.length === 0) {
+    return { total: 0, pass: 0, fail: 0, pending: 0 };
+  }
+
+  let pass = 0;
+  let fail = 0;
+  let pending = 0;
+  safeItems.forEach((item) => {
+    if (item.status === 'pass') pass += 1;
+    else if (item.status === 'fail') fail += 1;
+    else pending += 1;
+  });
+
+  return {
+    total: safeItems.length,
+    pass,
+    fail,
+    pending,
+  };
+};
+
+const getDurationSecondsFromMetadata = (metadata: Record<string, unknown> | null | undefined): number | null => {
+  if (!metadata) return null;
+  const candidate = metadata.duration_seconds;
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) return Math.max(0, candidate);
+  if (typeof candidate === 'string') {
+    const parsed = Number(candidate);
+    if (!Number.isNaN(parsed) && Number.isFinite(parsed)) return Math.max(0, parsed);
+  }
+  return null;
+};
+
+const getMetadataDuration = (metadata: Record<string, unknown> | null | undefined): string | null => {
+  const seconds = getDurationSecondsFromMetadata(metadata);
+  return seconds == null ? null : formatDurationSeconds(seconds);
+};
+
+const getLocationSummary = (metadata: Record<string, unknown> | null | undefined): string | null => {
+  if (!metadata) return null;
+  const lat = metadata.lat ?? metadata.latitude;
+  const lng = metadata.lng ?? metadata.longitude;
+  const speed = metadata.speed;
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  if (typeof speed === 'number') {
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)} (${speed} km/h)`;
+  }
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+};
+
+const getEventLabel = (eventType: string) => {
+  switch (eventType) {
+    case 'shift_start':
+      return 'Shift started';
+    case 'shift_end':
+      return 'Shift ended';
+    case 'break_start':
+      return 'Break started';
+    case 'break_end':
+      return 'Break ended';
+    case 'location':
+      return 'Location update';
+    default:
+      return eventType
+        .split('_')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+  }
+};
+
+const buildTimeline = (shift: Shift, events: ShiftEvent[]): TimelineItem[] => {
+  const timeline: TimelineItem[] = [];
+
+  if (shift.started_at) {
+    timeline.push({
+      id: `${shift.id}-started`,
+      eventType: 'shift_start',
+      label: 'Shift started',
+      timestamp: shift.started_at,
+    });
+  }
+
+  events.forEach((event, index) => {
+    const metadata = isRecord(event.metadata) ? event.metadata : null;
+    const durationLabel = event.event_type === 'break_end' ? getMetadataDuration(metadata) : null;
+    const locationLabel = getLocationSummary(metadata);
+    const details = durationLabel
+      ? `Duration: ${durationLabel}`
+      : locationLabel ?? undefined;
+
+    timeline.push({
+      id: event.id ?? `${event.shift_id}-${event.event_type}-${event.created_at}-${index}`,
+      eventType: event.event_type,
+      label: getEventLabel(event.event_type),
+      timestamp: event.created_at,
+      details,
+    });
+  });
+
+  if (shift.ended_at) {
+    timeline.push({
+      id: `${shift.id}-ended`,
+      eventType: 'shift_end',
+      label: 'Shift ended',
+      timestamp: shift.ended_at,
+    });
+  }
+
+  timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  return timeline;
+};
+
+const getBreakSummary = (events: ShiftEvent[]): BreakSummary => {
+  const breakEvents = events
+    .filter((event) => event.event_type === 'break_start' || event.event_type === 'break_end')
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+  let openBreakStart: number | null = null;
+  let totalSeconds = 0;
+
+  breakEvents.forEach((event) => {
+    const eventMs = new Date(event.created_at).getTime();
+    if (Number.isNaN(eventMs)) return;
+
+    if (event.event_type === 'break_start') {
+      openBreakStart = eventMs;
+      return;
+    }
+
+    if (openBreakStart != null) {
+      totalSeconds += Math.max(0, Math.floor((eventMs - openBreakStart) / 1000));
+      openBreakStart = null;
+      return;
+    }
+
+    const metadata = isRecord(event.metadata) ? event.metadata : null;
+    const fallbackDuration = getDurationSecondsFromMetadata(metadata);
+    if (fallbackDuration != null) {
+      totalSeconds += Math.floor(fallbackDuration);
+    }
+  });
+
+  const latestBreakEvent = breakEvents.length > 0 ? breakEvents[breakEvents.length - 1] : null;
+  const isOnBreak = latestBreakEvent?.event_type === 'break_start';
+  const latestBreakAt = latestBreakEvent?.created_at ?? null;
+
+  if (isOnBreak && openBreakStart != null) {
+    totalSeconds += Math.max(0, Math.floor((Date.now() - openBreakStart) / 1000));
+  }
+
+  return {
+    allowanceSeconds: BREAK_ALLOWANCE_SECONDS,
+    usedSeconds: totalSeconds,
+    remainingSeconds: Math.max(0, BREAK_ALLOWANCE_SECONDS - totalSeconds),
+    isOnBreak,
+    latestBreakAt,
+  };
+};
+
 export function ShiftsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -28,6 +322,11 @@ export function ShiftsPage() {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [endShiftDialog, setEndShiftDialog] = useState(false);
   const [endShiftReason, setEndShiftReason] = useState('');
+  const [detailShift, setDetailShift] = useState<Shift | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [shiftEvents, setShiftEvents] = useState<ShiftEvent[]>([]);
 
   const fetchShifts = useCallback(async () => {
     try {
@@ -123,6 +422,58 @@ export function ShiftsPage() {
     setEndShiftDialog(open);
     if (!open) setEndShiftReason('');
   };
+
+  const loadShiftDetails = useCallback(async (shift: Shift) => {
+    try {
+      setDetailsLoading(true);
+      setDetailsError(null);
+      setDetailShift(shift);
+      setDetailsOpen(true);
+
+      const { data, error: fetchError } = await supabase
+        .from('shift_events')
+        .select('id, shift_id, event_type, created_at, metadata')
+        .eq('shift_id', shift.id)
+        .order('created_at', { ascending: true });
+
+      if (fetchError) throw fetchError;
+      setShiftEvents((data as ShiftEvent[]) ?? []);
+    } catch (err) {
+      console.error('loadShiftDetails error:', err);
+      setDetailsError('Failed to load shift events');
+      setShiftEvents([]);
+    } finally {
+      setDetailsLoading(false);
+    }
+  }, []);
+
+  const handleDetailsOpenChange = (open: boolean) => {
+    setDetailsOpen(open);
+    if (!open) {
+      setDetailShift(null);
+      setDetailsError(null);
+      setShiftEvents([]);
+    }
+  };
+
+  const checklistItems = normalizeChecklist(detailShift?.checklist ?? null);
+  const checklistSummary = getChecklistSummary(checklistItems);
+  const timelineItems = detailShift ? buildTimeline(detailShift, shiftEvents) : [];
+  const breakSummary = getBreakSummary(shiftEvents);
+  const locationItems = shiftEvents
+    .map((event) => {
+      const metadata = isRecord(event.metadata) ? event.metadata : null;
+      const details = getLocationSummary(metadata);
+      if (!details) return null;
+      return {
+        id: event.id ?? `${event.shift_id}-${event.event_type}-${event.created_at}`,
+        label: getEventLabel(event.event_type),
+        timestamp: event.created_at,
+        details,
+      };
+    })
+    .filter((item): item is { id: string; label: string; timestamp: string; details: string } => Boolean(item));
+  const latestLocationItems = locationItems.slice(-5).reverse();
 
   return (
     <div className="space-y-6">
@@ -227,7 +578,7 @@ export function ShiftsPage() {
                     </TableRow>
                   ) : (
                     filteredShifts.map((shift) => {
-                      const checklistEntries = Object.entries(shift.checklist ?? {});
+                      const checklistEntries = normalizeChecklist(shift.checklist);
 
                       return (
                         <TableRow key={shift.id} className="border-gray-800 align-top">
@@ -266,22 +617,22 @@ export function ShiftsPage() {
                               <span className="text-sm text-gray-500">No checklist saved</span>
                             ) : (
                               <div className="space-y-1">
-                                {checklistEntries.map(([key, value]) => (
+                                {checklistEntries.map((item) => (
                                   <div
-                                    key={`${shift.id}-${key}`}
+                                    key={`${shift.id}-${item.key}`}
                                     className="flex items-center justify-between gap-3 rounded bg-[#0F0F0F] px-2 py-1 text-xs"
                                   >
-                                    <span className="text-gray-400">{formatChecklistLabel(key)}</span>
+                                    <span className="text-gray-400">{item.label}</span>
                                     <span
                                       className={
-                                        value === 'fail'
+                                        item.status === 'fail'
                                           ? 'font-medium text-red-400'
-                                          : value === 'pass'
+                                          : item.status === 'pass'
                                             ? 'font-medium text-green-400'
                                             : 'text-yellow-400'
                                       }
                                     >
-                                      {value == null ? 'pending' : String(value)}
+                                      {item.statusLabel}
                                     </span>
                                   </div>
                                 ))}
@@ -290,6 +641,16 @@ export function ShiftsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-400 hover:text-blue-400 h-8 px-2 text-xs"
+                                onClick={() => {
+                                  loadShiftDetails(shift);
+                                }}
+                              >
+                                View Details
+                              </Button>
                               {shift.status === 'active' && (
                                 <Button
                                   variant="ghost"
@@ -345,6 +706,194 @@ export function ShiftsPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={detailsOpen} onOpenChange={handleDetailsOpenChange}>
+        <DialogContent className="bg-[#161616] border-gray-800 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Shift Details</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Full timeline and event details for the selected shift.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!detailShift ? (
+            <div className="text-sm text-gray-500">No shift selected.</div>
+          ) : (
+            <div className="space-y-6">
+              <Card className="bg-[#0F0F0F] border-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-base">Overview</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
+                    <p className="text-xs text-gray-400">Driver</p>
+                    <p className="text-sm text-gray-100">{getDriverDisplay(detailShift)}</p>
+                  </div>
+                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
+                    <p className="text-xs text-gray-400">Vehicle</p>
+                    <p className="text-sm text-gray-100">{getVehicleDisplay(detailShift)}</p>
+                  </div>
+                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
+                    <p className="text-xs text-gray-400">Shift start time</p>
+                    <p className="text-sm text-gray-100">{formatTimestamp(detailShift.started_at)}</p>
+                  </div>
+                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
+                    <p className="text-xs text-gray-400">Shift end time</p>
+                    <p className="text-sm text-gray-100">{formatTimestamp(detailShift.ended_at)}</p>
+                  </div>
+                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
+                    <p className="text-xs text-gray-400">Current status</p>
+                    <div className="mt-1">
+                      <Badge
+                        className={
+                          detailShift.status === 'active'
+                            ? 'bg-green-950 text-green-400 border-green-900'
+                            : 'bg-gray-800 text-gray-400 border-gray-700'
+                        }
+                      >
+                        {detailShift.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <Card className="bg-[#0F0F0F] border-gray-800">
+                  <CardHeader>
+                    <CardTitle className="text-base">Checklist</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded bg-[#121212] px-2 py-1 text-gray-300">Total: {checklistSummary.total}</div>
+                      <div className="rounded bg-[#121212] px-2 py-1 text-green-400">Passed: {checklistSummary.pass}</div>
+                      <div className="rounded bg-[#121212] px-2 py-1 text-red-400">Failed: {checklistSummary.fail}</div>
+                      <div className="rounded bg-[#121212] px-2 py-1 text-yellow-400">Pending: {checklistSummary.pending}</div>
+                    </div>
+                    {checklistItems.length === 0 ? (
+                      <p className="text-gray-500">No checklist</p>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {checklistItems.map((item) => (
+                          <div key={`detail-${detailShift.id}-${item.key}`} className="rounded border border-gray-800 bg-[#121212] px-3 py-2 text-xs">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-gray-300">{item.label}</p>
+                              <span
+                                className={
+                                  item.status === 'fail'
+                                    ? 'font-medium text-red-400'
+                                    : item.status === 'pass'
+                                      ? 'font-medium text-green-400'
+                                      : 'text-yellow-400'
+                                }
+                              >
+                                {item.statusLabel}
+                              </span>
+                            </div>
+                            {item.valueLabel && (
+                              <p className="mt-1 text-gray-400">Value: {item.valueLabel}</p>
+                            )}
+                            {item.notes && (
+                              <p className="mt-1 text-gray-500">Notes: {item.notes}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-[#0F0F0F] border-gray-800">
+                  <CardHeader>
+                    <CardTitle className="text-base">Breaks</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="rounded bg-[#121212] px-3 py-2 text-gray-300">
+                        Break used: {formatDurationSeconds(breakSummary.usedSeconds) ?? '0s'}
+                      </div>
+                      <div className="rounded bg-[#121212] px-3 py-2 text-gray-300">
+                        Break allowance: {formatDurationSeconds(breakSummary.allowanceSeconds) ?? '30m 0s'}
+                      </div>
+                      <div className="rounded bg-[#121212] px-3 py-2 text-gray-300">
+                        Remaining: {formatDurationSeconds(breakSummary.remainingSeconds) ?? '0s'}
+                      </div>
+                      <div className="rounded bg-[#121212] px-3 py-2">
+                        <span className="text-gray-400 mr-2">Status:</span>
+                        <span className={breakSummary.isOnBreak ? 'text-yellow-400 font-medium' : 'text-green-400 font-medium'}>
+                          {breakSummary.isOnBreak ? 'On break' : 'Not on break'}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Latest break event: {formatTimestamp(breakSummary.latestBreakAt)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card className="bg-[#0F0F0F] border-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-base">GPS / Location events</CardTitle>
+                  <CardDescription className="text-gray-500">Location updates captured from shift events</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader className="w-5 h-5 text-[#FF6B35] animate-spin" />
+                    </div>
+                  ) : latestLocationItems.length === 0 ? (
+                    <p className="text-sm text-gray-500">No GPS yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {latestLocationItems.map((item) => (
+                        <div key={`loc-${item.id}`} className="rounded bg-[#121212] px-3 py-2 text-xs">
+                          <p className="text-gray-200">{item.label}</p>
+                          <p className="text-gray-400">{formatTimestamp(item.timestamp)}</p>
+                          {item.details && <p className="text-gray-300">{item.details}</p>}
+                        </div>
+                      ))}
+                      <p className="text-xs text-gray-500">Showing latest 5 location events.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#0F0F0F] border-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-base">Full Timeline</CardTitle>
+                  <CardDescription className="text-gray-500">
+                    Ordered events from shift start to shift end, including breaks.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader className="w-5 h-5 text-[#FF6B35] animate-spin" />
+                    </div>
+                  ) : detailsError ? (
+                    <p className="text-sm text-red-400">{detailsError}</p>
+                  ) : timelineItems.length === 0 ? (
+                    <p className="text-sm text-gray-500">No events</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {timelineItems.map((item) => (
+                        <div key={item.id} className="rounded border border-gray-800 bg-[#121212] px-3 py-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm text-gray-100">{item.label}</p>
+                            <p className="text-xs text-gray-400">{formatTimestamp(item.timestamp)}</p>
+                          </div>
+                          {item.details && <p className="mt-1 text-xs text-gray-300">{item.details}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

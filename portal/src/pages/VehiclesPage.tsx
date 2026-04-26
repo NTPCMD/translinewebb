@@ -135,24 +135,18 @@ export function VehiclesPage() {
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const res = await fetch('/api/admin/create-vehicle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      const { error: insertError } = await supabase
+        .from('vehicles')
+        .insert({
           rego: formData.rego,
           make: formData.make || null,
           model: formData.model || null,
-        }),
-      });
+          status: formData.status || 'active',
+        });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create vehicle');
+      if (insertError) {
+        throw new Error(insertError.message || 'Failed to create vehicle');
+      }
 
       setDialogOpen(false);
       setFormData({ rego: '', make: '', model: '', status: 'active' });
