@@ -13,6 +13,10 @@ export interface Shift {
   checklist?: Record<string, ShiftChecklistValue> | null;
   driver_name?: string | null;
   vehicle_rego?: string | null;
+  start_lat?: number | null;
+  start_lng?: number | null;
+  end_lat?: number | null;
+  end_lng?: number | null;
 }
 
 type ShiftRow = {
@@ -24,6 +28,34 @@ type ShiftRow = {
   status: 'active' | 'ended' | 'cancelled';
   checklist?: Record<string, ShiftChecklistValue> | null;
 };
+
+
+export interface ShiftFull {
+  id: string;
+  driver_id: string | null;
+  vehicle_id: string | null;
+  status: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  start_lat: number | null;
+  start_lng: number | null;
+  end_lat: number | null;
+  end_lng: number | null;
+  created_at: string | null;
+  driver_name: string | null;
+  vehicle_rego: string | null;
+}
+
+export interface ShiftEvent {
+  id: string;
+  shift_id: string;
+  event_type: string;
+  latitude: number | null;
+  longitude: number | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 
 async function enrichShiftRows(rows: ShiftRow[]): Promise<Shift[]> {
   const driverIds = Array.from(new Set(rows.map((row) => row.driver_id).filter(Boolean)));
@@ -54,10 +86,10 @@ async function enrichShiftRows(rows: ShiftRow[]): Promise<Shift[]> {
   }));
 }
 
-async function fetchShifts(options?: { onlyActive?: boolean }): Promise<Shift[]> {
+export async function fetchShifts(options?: { onlyActive?: boolean }): Promise<Shift[]> {
   let query = supabase
     .from('shifts')
-    .select('id, driver_id, vehicle_id, started_at, ended_at, status, checklist')
+    .select('id, driver_id, vehicle_id, started_at, start_lat, start_lng, end_lat, end_lng, ended_at, status, checklist')
     .order('started_at', { ascending: false });
 
   if (options?.onlyActive) {
@@ -178,4 +210,100 @@ export async function countTodayShifts(): Promise<number> {
 
   if (error) throw error;
   return count || 0;
+}
+
+export async function fetchShiftsFull(options?: {
+  driverId?: string;
+}): Promise<ShiftFull[]> {
+  let query = supabase
+    .from('shifts_full')
+    .select(`
+      id,
+      driver_id,
+      vehicle_id,
+      status,
+      started_at,
+      ended_at,
+      start_lat,
+      start_lng,
+      end_lat,
+      end_lng,
+      created_at,
+      driver_name,
+      vehicle_rego
+    `)
+    .order('started_at', { ascending: false });
+
+  if (options?.driverId) {
+    query = query.eq('driver_id', options.driverId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const shifts = (data as ShiftFull[]) ?? [];
+
+  // find rows missing driver_name
+  const missingIds = [
+    ...new Set(
+      shifts
+        .filter(row => !row.driver_name && row.driver_id)
+        .map(row => row.driver_id)
+    )
+  ];
+
+  if (missingIds.length === 0) {
+    return shifts;
+  }
+
+  // fetch names from drivers table
+  const { data: drivers, error: driverError } = await supabase
+    .from('drivers')
+    .select('id, full_name')
+    .in('id', missingIds);
+
+  if (driverError) throw driverError;
+
+  const driverMap = new Map(
+    (drivers || []).map(d => [d.id, d.full_name])
+  );
+
+  return shifts.map(row => ({
+    ...row,
+    driver_name:
+      row.driver_name ||
+      driverMap.get(row.driver_id) ||
+      row.driver_id
+  }));
+}
+
+export async function fetchShiftEvents(shiftId: string): Promise<ShiftEvent[]> {
+  const { data, error } = await supabase
+    .from('shift_events')
+    .select('id, shift_id, event_type, latitude, longitude, metadata, created_at')
+    .eq('shift_id', shiftId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data as ShiftEvent[]) ?? [];
+}
+
+export async function fetchShiftWithEvents(shiftId: string): Promise<{
+  shift: ShiftFull | null;
+  events: ShiftEvent[];
+}> {
+  const [shiftsData, events] = await Promise.all([
+    supabase
+      .from('shifts_full')
+      .select('id, driver_id, vehicle_id, status, started_at, ended_at, start_lat, start_lng, end_lat, end_lng, created_at, driver_name, vehicle_rego')
+      .eq('id', shiftId)
+      .maybeSingle(),
+    fetchShiftEvents(shiftId),
+  ]);
+
+  if (shiftsData.error) throw shiftsData.error;
+  return {
+    shift: (shiftsData.data as ShiftFull | null) ?? null,
+    events,
+  };
 }

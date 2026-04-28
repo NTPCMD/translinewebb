@@ -24,6 +24,8 @@ type ShiftEvent = {
   event_type: string;
   created_at: string;
   metadata?: Record<string, unknown> | null;
+  latitude?: number;
+  longitude?: number;
 };
 
 type TimelineItem = {
@@ -432,7 +434,7 @@ export function ShiftsPage() {
 
       const { data, error: fetchError } = await supabase
         .from('shift_events')
-        .select('id, shift_id, event_type, created_at, metadata')
+        .select('id, shift_id, event_type, created_at, metadata, latitude, longitude')
         .eq('shift_id', shift.id)
         .order('created_at', { ascending: true });
 
@@ -461,18 +463,7 @@ export function ShiftsPage() {
   const timelineItems = detailShift ? buildTimeline(detailShift, shiftEvents) : [];
   const breakSummary = getBreakSummary(shiftEvents);
   const locationItems = shiftEvents
-    .map((event) => {
-      const metadata = isRecord(event.metadata) ? event.metadata : null;
-      const details = getLocationSummary(metadata);
-      if (!details) return null;
-      return {
-        id: event.id ?? `${event.shift_id}-${event.event_type}-${event.created_at}`,
-        label: getEventLabel(event.event_type),
-        timestamp: event.created_at,
-        details,
-      };
-    })
-    .filter((item): item is { id: string; label: string; timestamp: string; details: string } => Boolean(item));
+    .filter((event) => event.event_type === 'location');
   const latestLocationItems = locationItems.slice(-5).reverse();
 
   return (
@@ -605,8 +596,8 @@ export function ShiftsPage() {
                             <Badge
                               className={
                                 shift.status === 'active'
-                                  ? 'bg-green-950 text-green-400 border-green-900'
-                                  : 'bg-gray-800 text-gray-400 border-gray-700'
+                                  ? 'bg-green-950 text-green-400 border-green-900 capitalize'
+                                  : 'bg-gray-800 text-gray-400 border-gray-700 capitalize'
                               }
                             >
                               {shift.status}
@@ -707,193 +698,218 @@ export function ShiftsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={detailsOpen} onOpenChange={handleDetailsOpenChange}>
-        <DialogContent className="bg-[#161616] border-gray-800 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Shift Details</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Full timeline and event details for the selected shift.
-            </DialogDescription>
-          </DialogHeader>
+<Dialog open={detailsOpen} onOpenChange={handleDetailsOpenChange}>
+  <DialogContent
+    style={{ maxWidth: "1200px" }}
+    className="bg-[#161616] border-gray-800 text-white max-h-[90vh] overflow-y-auto"
+  >
+    <DialogHeader>
+      <DialogTitle className="text-lg font-semibold">Shift Details</DialogTitle>
+      <DialogDescription className="text-gray-400">
+        Full timeline and event breakdown for the selected shift
+      </DialogDescription>
+    </DialogHeader>
 
-          {!detailShift ? (
-            <div className="text-sm text-gray-500">No shift selected.</div>
-          ) : (
-            <div className="space-y-6">
-              <Card className="bg-[#0F0F0F] border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-base">Overview</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
-                    <p className="text-xs text-gray-400">Driver</p>
-                    <p className="text-sm text-gray-100">{getDriverDisplay(detailShift)}</p>
-                  </div>
-                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
-                    <p className="text-xs text-gray-400">Vehicle</p>
-                    <p className="text-sm text-gray-100">{getVehicleDisplay(detailShift)}</p>
-                  </div>
-                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
-                    <p className="text-xs text-gray-400">Shift start time</p>
-                    <p className="text-sm text-gray-100">{formatTimestamp(detailShift.started_at)}</p>
-                  </div>
-                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
-                    <p className="text-xs text-gray-400">Shift end time</p>
-                    <p className="text-sm text-gray-100">{formatTimestamp(detailShift.ended_at)}</p>
-                  </div>
-                  <div className="rounded bg-[#121212] border border-gray-800 px-3 py-2">
-                    <p className="text-xs text-gray-400">Current status</p>
-                    <div className="mt-1">
-                      <Badge
-                        className={
-                          detailShift.status === 'active'
-                            ? 'bg-green-950 text-green-400 border-green-900'
-                            : 'bg-gray-800 text-gray-400 border-gray-700'
-                        }
-                      >
-                        {detailShift.status}
-                      </Badge>
+    {!detailShift ? (
+      <div className="text-sm text-gray-500">No shift selected.</div>
+    ) : (
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+        {/* LEFT COLUMN */}
+        <div className="xl:col-span-2 space-y-4">
+
+          {/* OVERVIEW */}
+          <Card className="bg-[#0F0F0F] border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white">Overview</CardTitle>
+            </CardHeader>
+
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              {[
+                ["Driver", getDriverDisplay(detailShift)],
+                ["Vehicle", getVehicleDisplay(detailShift)],
+                ["Start Time", formatTimestamp(detailShift.started_at)],
+                ["End Time", formatTimestamp(detailShift.ended_at)],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-lg bg-[#121212] border border-gray-800 px-3 py-2"
+                >
+                  <p className="text-xs text-gray-500">{label}</p>
+                  <p className="text-sm text-gray-100 truncate">{value}</p>
+                </div>
+              ))}
+
+              <div className="rounded-lg bg-[#121212] border border-gray-800 px-3 py-2">
+                <p className="text-xs text-gray-500">Status</p>
+                <Badge
+                  className={
+                    detailShift.status === "active"
+                      ? "bg-green-950 text-green-400 border-green-900 mt-1 capitalize"
+                      : "bg-gray-800 text-gray-400 border-gray-700 mt-1 capitalize"
+                  }
+                >
+                  {detailShift.status}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* GPS */}
+          <Card className="bg-[#0F0F0F] border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white">Live GPS Tracking</CardTitle>
+              <CardDescription className="text-gray-500">
+                Latest location updates from shift events
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              {detailsLoading ? (
+                <div className="flex justify-center py-6">
+                  <Loader className="w-5 h-5 text-[#FF6B35] animate-spin" />
+                </div>
+              ) : latestLocationItems.length === 0 ? (
+                <p className="text-sm text-gray-500">No GPS data available</p>
+              ) : (
+                <div className="space-y-2">
+                  {latestLocationItems.map((item) => (
+                    <div
+                      key={`loc-${item.id}`}
+                      className="rounded-lg bg-[#121212] border border-gray-800 px-3 py-2 text-xs"
+                    >
+                      <div className="flex justify-between text-gray-400">
+                        <span>{item.latitude}</span>
+                        <span>{item.longitude}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        {formatTimestamp(item.created_at)}
+                      </p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <Card className="bg-[#0F0F0F] border-gray-800">
-                  <CardHeader>
-                    <CardTitle className="text-base">Checklist</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded bg-[#121212] px-2 py-1 text-gray-300">Total: {checklistSummary.total}</div>
-                      <div className="rounded bg-[#121212] px-2 py-1 text-green-400">Passed: {checklistSummary.pass}</div>
-                      <div className="rounded bg-[#121212] px-2 py-1 text-red-400">Failed: {checklistSummary.fail}</div>
-                      <div className="rounded bg-[#121212] px-2 py-1 text-yellow-400">Pending: {checklistSummary.pending}</div>
-                    </div>
-                    {checklistItems.length === 0 ? (
-                      <p className="text-gray-500">No checklist</p>
-                    ) : (
-                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                        {checklistItems.map((item) => (
-                          <div key={`detail-${detailShift.id}-${item.key}`} className="rounded border border-gray-800 bg-[#121212] px-3 py-2 text-xs">
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="text-gray-300">{item.label}</p>
-                              <span
-                                className={
-                                  item.status === 'fail'
-                                    ? 'font-medium text-red-400'
-                                    : item.status === 'pass'
-                                      ? 'font-medium text-green-400'
-                                      : 'text-yellow-400'
-                                }
-                              >
-                                {item.statusLabel}
-                              </span>
-                            </div>
-                            {item.valueLabel && (
-                              <p className="mt-1 text-gray-400">Value: {item.valueLabel}</p>
-                            )}
-                            {item.notes && (
-                              <p className="mt-1 text-gray-500">Notes: {item.notes}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+          {/* CHECKLIST + BREAKS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                <Card className="bg-[#0F0F0F] border-gray-800">
-                  <CardHeader>
-                    <CardTitle className="text-base">Breaks</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      <div className="rounded bg-[#121212] px-3 py-2 text-gray-300">
-                        Break used: {formatDurationSeconds(breakSummary.usedSeconds) ?? '0s'}
-                      </div>
-                      <div className="rounded bg-[#121212] px-3 py-2 text-gray-300">
-                        Break allowance: {formatDurationSeconds(breakSummary.allowanceSeconds) ?? '30m 0s'}
-                      </div>
-                      <div className="rounded bg-[#121212] px-3 py-2 text-gray-300">
-                        Remaining: {formatDurationSeconds(breakSummary.remainingSeconds) ?? '0s'}
-                      </div>
-                      <div className="rounded bg-[#121212] px-3 py-2">
-                        <span className="text-gray-400 mr-2">Status:</span>
-                        <span className={breakSummary.isOnBreak ? 'text-yellow-400 font-medium' : 'text-green-400 font-medium'}>
-                          {breakSummary.isOnBreak ? 'On break' : 'Not on break'}
+            <Card className="bg-[#0F0F0F] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white">Checklist</CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-gray-300">Total: {checklistSummary.total}</div>
+                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-green-400">Passed: {checklistSummary.pass}</div>
+                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-red-400">Failed: {checklistSummary.fail}</div>
+                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-yellow-400">Pending: {checklistSummary.pending}</div>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                  {checklistItems.map((item) => (
+                    <div
+                      key={`detail-${detailShift.id}-${item.key}`}
+                      className="rounded-lg border border-gray-800 bg-[#121212] px-3 py-2 text-xs"
+                    >
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">{item.label}</span>
+                        <span
+                          className={
+                            item.status === "fail"
+                              ? "text-red-400"
+                              : item.status === "pass"
+                              ? "text-green-400"
+                              : "text-yellow-400"
+                          }
+                        >
+                          {item.statusLabel}
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Latest break event: {formatTimestamp(breakSummary.latestBreakAt)}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card className="bg-[#0F0F0F] border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-base">GPS / Location events</CardTitle>
-                  <CardDescription className="text-gray-500">Location updates captured from shift events</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {detailsLoading ? (
-                    <div className="flex justify-center py-4">
-                      <Loader className="w-5 h-5 text-[#FF6B35] animate-spin" />
-                    </div>
-                  ) : latestLocationItems.length === 0 ? (
-                    <p className="text-sm text-gray-500">No GPS yet</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {latestLocationItems.map((item) => (
-                        <div key={`loc-${item.id}`} className="rounded bg-[#121212] px-3 py-2 text-xs">
-                          <p className="text-gray-200">{item.label}</p>
-                          <p className="text-gray-400">{formatTimestamp(item.timestamp)}</p>
-                          {item.details && <p className="text-gray-300">{item.details}</p>}
-                        </div>
-                      ))}
-                      <p className="text-xs text-gray-500">Showing latest 5 location events.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            <Card className="bg-[#0F0F0F] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white">Breaks</CardTitle>
+              </CardHeader>
 
-              <Card className="bg-[#0F0F0F] border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-base">Full Timeline</CardTitle>
-                  <CardDescription className="text-gray-500">
-                    Ordered events from shift start to shift end, including breaks.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {detailsLoading ? (
-                    <div className="flex justify-center py-4">
-                      <Loader className="w-5 h-5 text-[#FF6B35] animate-spin" />
+              <CardContent className="space-y-3 text-sm">
+                <div className="space-y-2 text-xs">
+                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                    Used: {formatDurationSeconds(breakSummary.usedSeconds)}
+                  </div>
+                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                    Allowance: {formatDurationSeconds(breakSummary.allowanceSeconds)}
+                  </div>
+                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                    Remaining: {formatDurationSeconds(breakSummary.remainingSeconds)}
+                  </div>
+                  <div className="bg-[#121212] rounded-lg px-3 py-2">
+                    <span className="text-gray-400">Status:</span>{" "}
+                    <span className={breakSummary.isOnBreak ? "text-yellow-400" : "text-green-400"}>
+                      {breakSummary.isOnBreak ? "On break" : "Working"}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN - TIMELINE */}
+        <div className="xl:col-span-1">
+          <Card className="bg-[#0F0F0F] border-gray-800 h-full">
+            <CardHeader>
+              <CardTitle className="text-white">Timeline</CardTitle>
+              <CardDescription className="text-gray-500">
+                Chronological event history
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              {detailsLoading ? (
+                <div className="flex justify-center py-6">
+                  <Loader className="w-5 h-5 text-[#FF6B35] animate-spin" />
+                </div>
+              ) : timelineItems.length === 0 ? (
+                <p className="text-sm text-gray-500">No events found</p>
+              ) : (
+                <div className="space-y-2">
+                  {timelineItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-lg border border-gray-800 bg-[#121212] px-3 py-2"
+                    >
+                      <div className="flex justify-between">
+                        <p className="text-sm text-gray-200">{item.label}</p>
+                        <p className="text-xs text-gray-500">
+                          {formatTimestamp(item.timestamp)}
+                        </p>
+                      </div>
+
+                      {item.details && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {item.details}
+                        </p>
+                      )}
                     </div>
-                  ) : detailsError ? (
-                    <p className="text-sm text-red-400">{detailsError}</p>
-                  ) : timelineItems.length === 0 ? (
-                    <p className="text-sm text-gray-500">No events</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {timelineItems.map((item) => (
-                        <div key={item.id} className="rounded border border-gray-800 bg-[#121212] px-3 py-2">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm text-gray-100">{item.label}</p>
-                            <p className="text-xs text-gray-400">{formatTimestamp(item.timestamp)}</p>
-                          </div>
-                          {item.details && <p className="mt-1 text-xs text-gray-300">{item.details}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
     </div>
   );
 }
