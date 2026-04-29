@@ -13,12 +13,15 @@ import { fetchShiftEvents } from '@/lib/db/shifts';
 import { fetchShiftsFull } from '@/lib/db/shifts';
 import { Badge } from '@/app/components/ui/badge';
 import type { ShiftFull } from '@/lib/db/shifts';
+import { listVehicles } from '@/lib/db/vehicles';
+import { set } from 'date-fns';
 
 export function LiveMapPage() {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicleOptions, setVehicleOptions] = useState<string[]>([]);
   const [locations, setLocations] = useState<Map<string, any>>(new Map());
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [vehicleFilter, setVehicleFilter] = useState<string>('all');
@@ -210,45 +213,6 @@ export function LiveMapPage() {
           );
         }
 
-        // ── turn-by-turn markers ────────────────────────────────────────────────
-        const legs: any[] = route.legs ?? [];
-        const allSteps: any[] = legs.flatMap((leg: any) => leg.steps ?? []);
-
-        allSteps.forEach((step: any, i: number) => {
-          const [sLng, sLat] = step.maneuver.location;
-          const snapped = snapToRoute(coords, sLat, sLng);
-
-          const type: string     = step.maneuver.type ?? '';
-          const modifier: string = step.maneuver.modifier ?? 'straight';
-          const streetName: string = step.name || 'Unnamed road';
-
-          // skip depart/arrive — those are the start/end markers above
-          if (type === 'depart' || type === 'arrive') return;
-
-          const icon = turnIcon(modifier);
-          const markerHtml = `
-            <div style="
-              width:10px;height:10px;
-              background:white;
-              border:2px solid #fff;
-              border-radius:50%;
-              box-shadow:0 0 0 2px #1d4ed855;
-            "></div>`;
-
-          addLayer(
-            L.marker(snapped, {
-              icon: L.divIcon({ className: '', html: markerHtml, iconSize: [10, 10], iconAnchor: [5, 5] }),
-              zIndexOffset: 100,
-            }).bindPopup(
-              popupCard([
-                { label: 'Turn',     value: `${icon} ${modifier}` },
-                { label: 'Street',   value: streetName }
-              ], `Turn ${i + 1}`),
-              { closeButton: false }
-            )
-          );
-        });
-
         // ── snapped STOP markers (amber) ────────────────────────────────────────
         const MIN_STOP_MS = 3 * 60 * 1000;
         const MIN_R = 50, MAX_R = 100;
@@ -317,7 +281,7 @@ export function LiveMapPage() {
         s.end_lat != null && s.end_lng != null
       );
 
-      if (!shift) return;
+      if (!shift || shift.status == "completed") return;
       await drawRouteForShift(shift);
     } catch (err) {
       console.error('Driver route fetch failed:', err);
@@ -342,17 +306,21 @@ export function LiveMapPage() {
     });
   }, []);
 
-  const vehicleOptions = useMemo(() => {
-    const set = new Set<string>();
-
-    drivers.forEach(d => {
-      if (d.current_vehicle_rego) {
-        set.add(d.current_vehicle_rego);
-      }
-    });
-
-    return Array.from(set);
-  }, [drivers]);
+  const getAllVehicles = async () => {
+    try {
+      const vehicles = await listVehicles();
+      const set = new Set<string>();
+      vehicles.forEach(v => {
+        if (v.rego) {
+          set.add(v.rego);
+        }
+      });
+      setVehicleOptions(Array.from(set));
+    } catch (err) {
+      console.error('Failed to fetch vehicles:', err);
+      setVehicleOptions([]);
+    }
+  };
 
   const gpsDrivers = useMemo(() => {
     return drivers
@@ -421,7 +389,7 @@ export function LiveMapPage() {
       try {
         const driverRows = await listDrivers();
         setDrivers(driverRows);
-
+        getAllVehicles();
         const shifts = await fetchShiftsFull();
         setPreviousShifts(
           shifts.filter((shift) =>
@@ -568,11 +536,11 @@ export function LiveMapPage() {
                   <SelectContent>
                     <SelectItem value="all">All vehicles</SelectItem>
 
-                    {vehicleOptions.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {v}
-                      </SelectItem>
-                    ))}
+                    {vehicleOptions.map((v: string) => 
+                        <SelectItem key={v} value={v}>
+                          {v}
+                        </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
