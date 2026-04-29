@@ -294,7 +294,18 @@ export function DriversPage() {
     });
   }, [filteredDrivers, resolveDriverId, activeShiftMap]);
 
-  // Add driver via Supabase Auth (creates profile automatically)
+  const parseCreateDriverError = (rawBody: string, status: number) => {
+    if (!rawBody) return `Create driver failed (${status})`;
+
+    try {
+      const parsed = JSON.parse(rawBody) as { error?: string; message?: string; detail?: string };
+      return parsed.error || parsed.message || parsed.detail || `Create driver failed (${status})`;
+    } catch {
+      return rawBody;
+    }
+  };
+
+  // Add driver via admin API (requires server-side service role privileges)
   const handleAddDriver = async () => {
     if (!formData.name || !formData.email || !formData.password) {
       setError('Name, email, and password are required');
@@ -306,27 +317,69 @@ export function DriversPage() {
       return;
     }
     try {
+      setError(null);
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
         setError('Not authenticated. Please log in again.');
         return;
       }
-      console.info('DriversPage: POST /api/admin/create-driver email=', formData.email);
-      const response = await fetch('/api/admin/create-driver', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ email: formData.email, password: formData.password, full_name: formData.name || formData.email.split('@')[0], phone: formData.phone }),
-      });
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        console.warn('DriversPage: /api/admin/create-driver error=', errBody);
-        setError(errBody?.error || 'Failed to create driver');
+
+      const endpoints = ['/api/admin/create-driver', '/admin/create-driver'];
+      const payload = {
+        email: formData.email,
+        password: formData.password,
+        full_name: formData.name || formData.email.split('@')[0],
+        name: formData.name || formData.email.split('@')[0],
+        phone: formData.phone,
+      };
+
+      let created = false;
+      let lastErrorMessage = 'Failed to create driver';
+      let sawNotFound = false;
+
+      for (const endpoint of endpoints) {
+        console.info('DriversPage: POST create-driver', { endpoint, email: formData.email });
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          created = true;
+          break;
+        }
+
+        const responseBody = await response.text().catch(() => '');
+        console.warn('DriversPage: create-driver non-OK response', {
+          endpoint,
+          status: response.status,
+          body: responseBody,
+        });
+
+        if (response.status === 404) {
+          sawNotFound = true;
+          continue;
+        }
+
+        lastErrorMessage = parseCreateDriverError(responseBody, response.status);
+        break;
+      }
+
+      if (!created) {
+        if (sawNotFound) {
+          setError('Driver creation API is not configured in this environment. Start the root dev server with "npm run dev" or configure an admin API endpoint.');
+          return;
+        }
+
+        setError(lastErrorMessage);
         return;
       }
+
       // Refetch drivers list from drivers_full
       const previousTotal = totalCount;
       const refreshedDrivers = await fetchDrivers();

@@ -12,6 +12,7 @@ import { listLatestLocationsByDrivers, subscribeToLocationUpdates } from '@/lib/
 import { fetchShiftEvents } from '@/lib/db/shifts';
 import { fetchShiftsFull } from '@/lib/db/shifts';
 import { Badge } from '@/app/components/ui/badge';
+import type { ShiftFull } from '@/lib/db/shifts';
 
 export function LiveMapPage() {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -22,6 +23,8 @@ export function LiveMapPage() {
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [vehicleFilter, setVehicleFilter] = useState<string>('all');
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [selectedHistoryShiftId, setSelectedHistoryShiftId] = useState<string>('all');
+  const [previousShifts, setPreviousShifts] = useState<ShiftFull[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const routeLayerRef = useRef<L.Polyline | null>(null);
 
@@ -84,12 +87,11 @@ export function LiveMapPage() {
   }
 
 
-  const drawRouteForDriver = async (driverId: string) => {
+  const drawRouteForShift = async (shift: ShiftFull) => {
       const map = mapInstanceRef.current;
       if (!map) return;
 
       clearRoute();
-      setSelectedDriverId(driverId);
       setRouteLoading(true);
 
       // track all layers added so clearRoute can remove them
@@ -100,13 +102,14 @@ export function LiveMapPage() {
       (routeLayerRef as any)._extra = extraLayers;
 
       try {
-        const allShifts = await fetchShiftsFull();
-        const shift = allShifts.find(s =>
-          s.driver_id === driverId &&
-          s.start_lat != null && s.start_lng != null &&
-          s.end_lat != null && s.end_lng != null
-        );
-        if (!shift) return;
+        if (
+          shift.start_lat == null ||
+          shift.start_lng == null ||
+          shift.end_lat == null ||
+          shift.end_lng == null
+        ) {
+          return;
+        }
 
         const url =
           `https://router.project-osrm.org/route/v1/driving/` +
@@ -303,6 +306,24 @@ export function LiveMapPage() {
       }
   };
 
+  const drawRouteForDriver = async (driverId: string) => {
+    setSelectedDriverId(driverId);
+    setSelectedHistoryShiftId('all');
+
+    try {
+      const allShifts = await fetchShiftsFull({ driverId });
+      const shift = allShifts.find(s =>
+        s.start_lat != null && s.start_lng != null &&
+        s.end_lat != null && s.end_lng != null
+      );
+
+      if (!shift) return;
+      await drawRouteForShift(shift);
+    } catch (err) {
+      console.error('Driver route fetch failed:', err);
+    }
+  };
+
   const markerIcon = useCallback((online: boolean | null) => {
     return L.divIcon({
       className: 'custom-marker',
@@ -355,6 +376,31 @@ export function LiveMapPage() {
       }));
   }, [drivers, locations, onlineOnly, vehicleFilter]);
 
+  const previousShiftOptions = useMemo(() => {
+    return previousShifts.filter((shift) =>
+      Boolean(
+        shift.id &&
+        shift.started_at &&
+        shift.start_lat != null &&
+        shift.start_lng != null &&
+        shift.end_lat != null &&
+        shift.end_lng != null
+      )
+    );
+  }, [previousShifts]);
+
+  const formatPreviousShiftLabel = useCallback((shift: ShiftFull) => {
+    const dateLabel = shift.started_at
+      ? new Date(shift.started_at).toLocaleDateString([], {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : 'Unknown date';
+
+    return `${shift.vehicle_rego ?? 'Unknown Vehicle'} | ${dateLabel} | ${shift.driver_name ?? 'Unknown Driver'}`;
+  }, []);
+
   useEffect(() => {
     if (!mapRef.current) return;
     if (mapInstanceRef.current) return;
@@ -375,6 +421,13 @@ export function LiveMapPage() {
       try {
         const driverRows = await listDrivers();
         setDrivers(driverRows);
+
+        const shifts = await fetchShiftsFull();
+        setPreviousShifts(
+          shifts.filter((shift) =>
+            shift.status !== 'active' && shift.ended_at != null
+          )
+        );
 
         const rows = await listLatestLocationsByDrivers();
         const locMap = new Map();
@@ -580,6 +633,39 @@ export function LiveMapPage() {
                       </div>
                     </button>
                   ))}
+
+                <div className="pt-3 border-t border-gray-800 space-y-2">
+                  <Label className="text-gray-300">Previous Shifts</Label>
+                  <Select
+                    value={selectedHistoryShiftId}
+                    onValueChange={async (value) => {
+                      setSelectedHistoryShiftId(value);
+                      setSelectedDriverId(null);
+
+                      if (value === 'all') {
+                        clearRoute();
+                        return;
+                      }
+
+                      const selectedShift = previousShiftOptions.find((shift) => shift.id === value);
+                      if (!selectedShift) return;
+
+                      await drawRouteForShift(selectedShift);
+                    }}
+                  >
+                    <SelectTrigger className="bg-[#0F0F0F] border-gray-700 text-white">
+                      <SelectValue placeholder="Select previous shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Select previous shift</SelectItem>
+                      {previousShiftOptions.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id}>
+                          {formatPreviousShiftLabel(shift)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
