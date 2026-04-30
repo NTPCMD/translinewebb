@@ -30,13 +30,20 @@ export function LiveMapPage() {
   const [previousShifts, setPreviousShifts] = useState<ShiftFull[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const routeLayerRef = useRef<L.Polyline | null>(null);
+  const extraLayersRef = useRef<L.Layer[]>([]);
 
-  const clearRoute = () => {
-    if (routeLayerRef.current && mapInstanceRef.current) {
-      mapInstanceRef.current.removeLayer(routeLayerRef.current);
-      routeLayerRef.current = null;
-    }
-  };
+const clearRoute = () => {
+  const map = mapInstanceRef.current;
+  if (!map) return;
+
+  if (routeLayerRef.current) {
+    map.removeLayer(routeLayerRef.current);
+    routeLayerRef.current = null;
+  }
+
+  extraLayersRef.current.forEach(l => map.removeLayer(l));
+  extraLayersRef.current = [];
+};
 
   function snapToRoute(
     coords: [number, number][],
@@ -98,11 +105,9 @@ export function LiveMapPage() {
       setRouteLoading(true);
 
       // track all layers added so clearRoute can remove them
-      const extraLayers: L.Layer[] = [];
-      const addLayer = (l: L.Layer) => { extraLayers.push(l); l.addTo(map); };
+      extraLayersRef.current = [];
+      const addLayer = (l: L.Layer) => { extraLayersRef.current.push(l); l.addTo(map); }
 
-      // store cleanup alongside polyline
-      (routeLayerRef as any)._extra = extraLayers;
 
       try {
         if (
@@ -213,7 +218,6 @@ export function LiveMapPage() {
           );
         }
 
-        // ── snapped STOP markers (amber) ────────────────────────────────────────
         const MIN_STOP_MS = 3 * 60 * 1000;
         const MIN_R = 50, MAX_R = 100;
 
