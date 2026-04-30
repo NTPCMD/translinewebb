@@ -14,7 +14,6 @@ import { fetchShiftsFull } from '@/lib/db/shifts';
 import { Badge } from '@/app/components/ui/badge';
 import type { ShiftFull } from '@/lib/db/shifts';
 import { listVehicles } from '@/lib/db/vehicles';
-import { set } from 'date-fns';
 
 export function LiveMapPage() {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -28,6 +27,7 @@ export function LiveMapPage() {
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [selectedHistoryShiftId, setSelectedHistoryShiftId] = useState<string>('all');
   const [previousShifts, setPreviousShifts] = useState<ShiftFull[]>([]);
+  const [activeShifts, setActiveShifts] = useState<ShiftFull[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const routeLayerRef = useRef<L.Polyline | null>(null);
   const extraLayersRef = useRef<L.Layer[]>([]);
@@ -64,15 +64,7 @@ const clearRoute = () => {
       ? `${(meters / 1000).toFixed(2)} km`
       : `${Math.round(meters)} m`;
   }
-
-  function turnIcon(modifier: string): string {
-    const icons: Record<string, string> = {
-      left: '↰', right: '↱', 'slight left': '↖', 'slight right': '↗',
-      'sharp left': '⬅', 'sharp right': '➡', straight: '↑', uturn: '↩',
-    };
-    return icons[modifier] ?? '•';
-  }
-
+  
   function dotHtml(color: string, size = 12, glow = false): string {
     return `<div style="
       width:${size}px;height:${size}px;
@@ -336,12 +328,6 @@ const clearRoute = () => {
         return driver.online_status === "online";
       })
 
-      // vehicle filter
-      .filter(driver => {
-        if (vehicleFilter === 'all') return true;
-        return driver.current_vehicle_rego === vehicleFilter;
-      })
-
       .map(driver => ({
         ...driver,
         location: locations.get(driver.driver_id)
@@ -349,6 +335,7 @@ const clearRoute = () => {
   }, [drivers, locations, onlineOnly, vehicleFilter]);
 
   const previousShiftOptions = useMemo(() => {
+    console.log(vehicleFilter, previousShifts);
     return previousShifts.filter((shift) =>
       Boolean(
         shift.id &&
@@ -356,10 +343,12 @@ const clearRoute = () => {
         shift.start_lat != null &&
         shift.start_lng != null &&
         shift.end_lat != null &&
-        shift.end_lng != null
+        shift.end_lng != null &&
+        (shift.vehicle_rego == vehicleFilter || vehicleFilter === 'all') &&
+      (onlineOnly ? gpsDrivers.find(d => d.driver_id === shift.driver_id)?.online_status === 'online' : true)
       )
     );
-  }, [previousShifts]);
+  }, [previousShifts, vehicleFilter, onlineOnly]);
 
   const formatPreviousShiftLabel = useCallback((shift: ShiftFull) => {
     const dateLabel = shift.started_at
@@ -400,6 +389,9 @@ const clearRoute = () => {
             shift.status !== 'active' && shift.ended_at != null
           )
         );
+        setActiveShifts(
+          shifts.filter((shift) => shift.status === 'active')
+        )
 
         const rows = await listLatestLocationsByDrivers();
         const locMap = new Map();
@@ -553,9 +545,9 @@ const clearRoute = () => {
 
           <Card className="bg-[#161616] border-gray-800">
             <CardHeader>
-              <CardTitle className="text-white">Active Drivers</CardTitle>
+              <CardTitle className="text-white">Active Shifts</CardTitle>
               <CardDescription className="text-gray-400">
-                {String(gpsDrivers.length)} drivers sharing GPS
+
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -565,13 +557,13 @@ const clearRoute = () => {
                     <Loader className="w-6 h-6 text-[#FF6B35] animate-spin" />
                   </div>
                 ) :
-                  gpsDrivers.map((driver) => (
+                  activeShifts.length ? activeShifts.map((shift) => (
                     <button
                       type="button"
-                      key={driver.driver_id}
-                      onClick={() => drawRouteForDriver(driver.driver_id)}
+                      key={shift.id}
+                      onClick={() => drawRouteForShift(shift)}
                       className={`w-full text-left p-3 bg-[#0F0F0F] rounded-lg border transition-colors ${
-                        selectedDriverId === driver.driver_id
+                        selectedDriverId === shift.driver_id
                           ? 'border-[#3B82F6]'
                           : 'border-gray-800 hover:border-[#FF6B35]'
                       }`}
@@ -579,13 +571,13 @@ const clearRoute = () => {
                       <div className="flex items-start justify-between mb-2">
                         <div className="min-w-0">
                           <p className="font-medium text-white truncate">
-                            {driver?.full_name || 'Unknown'}
+                            {shift?.driver_name || 'Unknown'}
                           </p>
                           
-                          <p className="text-gray-400 text-xs mb-2"> Current Vehicle: {driver.current_vehicle_rego}</p>
-                          {driver.online_status === 'online' ? (
+                          <p className="text-gray-400 text-xs mb-2">Vehicle: {shift.vehicle_rego}</p>
+                          {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.online_status === 'online' ? (
                           <>
-                          <p className="text-gray-400 text-xs mb-2"> Device ID: {driver.device_id}</p>
+                          <p className="text-gray-400 text-xs mb-2"> Device ID: {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.device_id}</p>
                           <Badge className="bg-green-950 text-green-400 border-green-900">
                             Online
                           </Badge>
@@ -600,11 +592,13 @@ const clearRoute = () => {
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <MapPin className="w-3 h-3 text-[#FF6B35] flex-shrink-0" />
                         <span>
-                          {driver.location?.latitude?.toFixed(4)}, {driver.location?.longitude?.toFixed(4)}
+                          {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.location?.latitude?.toFixed(4)}, {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.location?.longitude?.toFixed(4)}
                         </span>
                       </div>
                     </button>
-                  ))}
+                  )) : (
+                    <p className="text-gray-400 text-sm">No active shifts available.</p>
+                  )}
 
                 <div className="pt-3 border-t border-gray-800 space-y-2">
                   <Label className="text-gray-300">Previous Shifts</Label>
@@ -637,6 +631,49 @@ const clearRoute = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {previousShifts.find(s => s.id === selectedHistoryShiftId) && 
+                  (previousShifts.find(s => s.id === selectedHistoryShiftId)?.vehicle_rego === vehicleFilter || vehicleFilter === 'all') && 
+                  (gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id))
+                  &&
+                  (
+                    <button
+                      type="button"
+                      onClick={() => drawRouteForShift(previousShifts.find(s => s.id === selectedHistoryShiftId)!)}
+                      className={`w-full text-left p-3 bg-[#0F0F0F] rounded-lg border transition-colors 
+                      border-[#3B82F6]
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-white truncate">
+                            Driver Name: {previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_name || 'Unknown'}
+                          </p>
+                          
+                          <p className="text-gray-400 text-xs mb-2">Vehicle for Shift: {previousShifts.find(s => s.id === selectedHistoryShiftId)?.vehicle_rego}</p>
+                          {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.online_status === 'online' ? (
+                          <>
+                          <p className="text-gray-400 text-xs mb-2"> Device ID: {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.device_id}</p>
+                          <p className="text-gray-400 text-xs">Driver Status: </p><Badge className="bg-green-950 text-green-400 border-green-900">
+                            Online
+                          </Badge>
+                          </>
+                        ) : (
+                          <Badge className="bg-amber-950 text-amber-300 border-amber-800">
+                            Offline
+                          </Badge>
+                        )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <MapPin className="w-3 h-3 text-[#FF6B35] flex-shrink-0" />
+                        <span>
+                          <p className='text-gray-400 text-xs'>
+                            Latest Location:
+                            </p>{gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.location?.latitude?.toFixed(4)}, {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.location?.longitude?.toFixed(4)}
+                        </span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             </CardContent>
