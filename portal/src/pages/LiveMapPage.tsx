@@ -29,6 +29,7 @@ export function LiveMapPage() {
   const [previousShifts, setPreviousShifts] = useState<ShiftFull[]>([]);
   const [activeShifts, setActiveShifts] = useState<ShiftFull[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
   const extraLayersRef = useRef<L.Layer[]>([]);
 
@@ -104,16 +105,27 @@ const clearRoute = () => {
       try {
         if (
           shift.start_lat == null ||
-          shift.start_lng == null ||
-          shift.end_lat == null ||
-          shift.end_lng == null
+          shift.start_lng == null 
         ) {
           return;
         }
 
+        let end_lat = shift.end_lat;
+        let end_lng = shift.end_lng;
+
+        const shiftDriver = gpsDrivers.find(d=>d.driver_id === shift.driver_id);
+        if(shift.status !== 'completed' && shiftDriver?.location) {
+          end_lat = shiftDriver.location.latitude;
+          end_lng = shiftDriver.location.longitude;
+        } else if (end_lat == null || end_lng == null) {
+          return;
+        }
+
+        setSelectedShiftId(shift.id ?? null);
+
         const url =
           `https://router.project-osrm.org/route/v1/driving/` +
-          `${shift.start_lng},${shift.start_lat};${shift.end_lng},${shift.end_lat}` +
+          `${shift.start_lng},${shift.start_lat};${end_lng},${end_lat}` +
           `?overview=full&geometries=geojson&steps=true`;
 
         const res = await fetch(url);
@@ -121,7 +133,7 @@ const clearRoute = () => {
         if (json.code !== 'Ok' || !json.routes?.[0]) return;
 
         const route = json.routes[0];
-        const totalDistance: number = route.distance; // metres
+        const totalDistance: number = route.distance;
         const coords: [number, number][] = route.geometry.coordinates.map(
           ([lng, lat]: [number, number]) => [lat, lng]
         );
@@ -563,7 +575,7 @@ const clearRoute = () => {
                       key={shift.id}
                       onClick={() => drawRouteForShift(shift)}
                       className={`w-full text-left p-3 bg-[#0F0F0F] rounded-lg border transition-colors ${
-                        selectedDriverId === shift.driver_id
+                        selectedShiftId === shift.id
                           ? 'border-[#3B82F6]'
                           : 'border-gray-800 hover:border-[#FF6B35]'
                       }`}
@@ -639,8 +651,10 @@ const clearRoute = () => {
                     <button
                       type="button"
                       onClick={() => drawRouteForShift(previousShifts.find(s => s.id === selectedHistoryShiftId)!)}
-                      className={`w-full text-left p-3 bg-[#0F0F0F] rounded-lg border transition-colors 
-                      border-[#3B82F6]
+                      className={`w-full text-left p-3 bg-[#0F0F0F] rounded-lg border transition-colors ${
+                        selectedShiftId === selectedHistoryShiftId
+                          ? 'border-[#3B82F6]'
+                          : 'border-gray-800 hover:border-[#FF6B35]'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
