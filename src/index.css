@@ -143,10 +143,10 @@
   }
 
   .hero-title {
-    font-size: clamp(3.35rem, 8vw, 7.5rem);
-    font-weight: 850;
-    line-height: 0.9;
-    letter-spacing: -0.065em;
+    font-size: clamp(4rem, 8.4vw, 8rem);
+    font-weight: 760;
+    line-height: 0.86;
+    letter-spacing: -0.07em;
   }
 
   .display-heading {
@@ -174,7 +174,7 @@
   }
 
   .service-card {
-    background: rgba(255, 255, 255, 0.82);
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid #e5e0d8;
     border-radius: 1.5rem;
     box-shadow: 0 20px 60px rgba(35, 31, 26, 0.06);
@@ -214,10 +214,22 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.08;
+  opacity: 0.055;
   background-image: linear-gradient(rgba(255,255,255,.28) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.28) 1px, transparent 1px);
   background-size: 72px 72px;
   mask-image: linear-gradient(to right, black, transparent 70%);
+}
+
+.premium-dark::before {
+  content: '';
+  position: absolute;
+  width: 52rem;
+  height: 52rem;
+  top: -34rem;
+  right: -16rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(239, 51, 64, 0.12), transparent 66%);
+  pointer-events: none;
 }
 
 .quote-panel {

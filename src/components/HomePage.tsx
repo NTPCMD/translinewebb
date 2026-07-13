@@ -11,6 +11,7 @@ import {
   Truck,
 } from 'lucide-react';
 import type { Page } from '../App';
+import premiumHero from '../assets/transline-premium-hero.jpg';
 
 interface HomePageProps {
   onNavigate: (page: Page) => void;
@@ -52,48 +53,48 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div className="overflow-hidden bg-[#f7f4ee]">
-      <section className="hero-grid relative min-h-[760px] bg-[#171717] text-white lg:min-h-[820px]">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-60"
-          style={{
-            backgroundImage:
-              'url(https://images.unsplash.com/photo-1766608422198-5be9ac0aac9e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmcmVpZ2h0JTIwdHJ1Y2slMjBoaWdod2F5fGVufDF8fHx8MTc2NzQ1MTY1MXww&ixlib=rb-4.1.0&q=88&w=1800)',
-          }}
+      <section className="hero-grid relative min-h-[760px] bg-[#0c0d0e] text-white lg:min-h-[840px]">
+        <img
+          src={premiumHero}
+          alt="Modern freight truck travelling at dusk"
+          className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,15,15,0.97)_0%,rgba(15,15,15,0.78)_47%,rgba(15,15,15,0.25)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(15,15,15,0.88)_0%,transparent_45%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,8,9,0.98)_0%,rgba(7,8,9,0.91)_32%,rgba(7,8,9,0.55)_58%,rgba(7,8,9,0.12)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,8,9,0.94)_0%,transparent_48%,rgba(7,8,9,0.18)_100%)]" />
 
-        <div className="relative mx-auto flex min-h-[760px] max-w-[1440px] flex-col justify-center px-5 pb-24 pt-20 sm:px-8 lg:min-h-[820px] lg:px-12 xl:px-20">
+        <div className="relative mx-auto flex min-h-[760px] max-w-[1440px] flex-col justify-center px-5 pb-24 pt-20 sm:px-8 lg:min-h-[840px] lg:px-12 xl:px-20">
           <div className="scroll-reveal max-w-4xl">
-            <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur-md">
-              <MapPin className="h-4 w-4 text-[#ef3340]" />
-              Perth owned · WA moving
+            <div className="mb-9 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/65">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] backdrop-blur-md">
+                <MapPin className="h-3.5 w-3.5 text-[#ef3340]" />
+              </span>
+              Perth · Western Australia
             </div>
-            <h1 className="hero-title max-w-4xl text-white">
-              Freight that keeps
-              <span className="block text-[#ef3340]">business moving.</span>
+            <h1 className="hero-title max-w-3xl text-white">
+              Transport,
+              <span className="block font-light italic text-white/55">elevated.</span>
             </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/72 sm:text-xl">
-              Smart, dependable transport for anything from a single parcel to a full commercial load—delivered by a local team that picks up the phone.
+            <p className="mt-8 max-w-xl text-lg leading-8 text-white/66 sm:text-xl">
+              Precision freight and logistics for Perth businesses that expect more—from first contact to final handover.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => handleNavigate('quote')}
-                className="interactive-button group bg-[#ef3340] px-7 py-4 text-white hover:bg-[#d91f2c]"
+                className="interactive-button group bg-[#ef3340] px-8 py-4 text-white hover:bg-[#d91f2c]"
               >
-                Get a fast quote
+                Request a quote
                 <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </button>
               <button
                 onClick={() => handleNavigate('services')}
-                className="interactive-button border border-white/25 bg-white/10 px-7 py-4 text-white backdrop-blur-md hover:bg-white hover:text-[#171717]"
+                className="interactive-button border border-white/18 bg-white/[0.06] px-8 py-4 text-white backdrop-blur-md hover:bg-white hover:text-[#171717]"
               >
                 Explore services
               </button>
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/20 backdrop-blur-md">
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-black/20 backdrop-blur-xl">
             <div className="mx-auto grid max-w-[1440px] grid-cols-1 px-5 sm:grid-cols-3 sm:px-8 lg:px-12 xl:px-20">
               {[
                 ['Perth & surrounds', 'Local knowledge'],
@@ -102,7 +103,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
               ].map(([value, label], index) => (
                 <div
                   key={value}
-                  className={`flex items-center gap-4 py-5 sm:px-6 ${index > 0 ? 'hidden border-l border-white/10 sm:flex' : ''}`}
+                  className={`flex items-center gap-4 py-5 sm:px-6 ${index > 0 ? 'hidden border-l border-white/[0.08] sm:flex' : ''}`}
                 >
                   <Check className="h-5 w-5 shrink-0 text-[#ef3340]" />
                   <div>
@@ -116,16 +117,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32">
+      <section className="relative py-28 sm:py-36">
         <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12 xl:px-20">
           <div className="scroll-reveal grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
             <div>
-              <p className="eyebrow">What we move</p>
-              <h2 className="display-heading mt-5">Every load deserves the right solution.</h2>
+              <p className="eyebrow">Considered logistics</p>
+              <h2 className="display-heading mt-5">The right move, every time.</h2>
             </div>
             <div className="flex flex-col justify-end">
               <p className="max-w-2xl text-lg leading-8 text-[#66635f]">
-                No scripts, no one-size-fits-all transport. Tell us what needs moving and when—it’s our job to match the right vehicle, route and handling plan.
+                Every job is planned with intent. Tell us what needs moving and when—we’ll match the vehicle, route and handling plan to the brief.
               </p>
               <button
                 onClick={() => handleNavigate('services')}
@@ -163,15 +164,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </div>
       </section>
 
-      <section className="bg-[#1b1b1a] py-24 text-white sm:py-32">
+      <section className="premium-dark relative overflow-hidden bg-[#111315] py-28 text-white sm:py-36">
         <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12 xl:px-20">
           <div className="scroll-reveal grid gap-10 lg:grid-cols-2 lg:items-end">
             <div>
-              <p className="eyebrow text-[#ff5963]">Built for the job</p>
-              <h2 className="display-heading mt-5 max-w-xl text-white">A fleet with range. A team with drive.</h2>
+              <p className="eyebrow text-[#ff5963]">Purpose-built fleet</p>
+              <h2 className="display-heading mt-5 max-w-xl text-white">Capability, without compromise.</h2>
             </div>
             <p className="max-w-xl text-lg leading-8 text-white/60 lg:justify-self-end">
-              From nimble vans to 14-tonne pantechs, our company-owned vehicles are maintained, ready and matched to your freight—not the other way around.
+              From nimble vans to 14-tonne pantechs, every vehicle is maintained, ready and selected around the freight—not the other way around.
             </p>
           </div>
 
@@ -200,14 +201,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </div>
       </section>
 
-      <section className="relative bg-white py-24 sm:py-32">
+      <section className="relative bg-[#fbfaf7] py-28 sm:py-36">
         <div className="absolute right-0 top-0 h-full w-1/3 bg-[#f7f4ee]" />
         <div className="relative mx-auto grid max-w-[1440px] gap-14 px-5 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-12 xl:px-20">
           <div className="scroll-reveal">
-            <p className="eyebrow">The Transline difference</p>
-            <h2 className="display-heading mt-5 max-w-xl">Transport without the runaround.</h2>
+            <p className="eyebrow">Quietly dependable</p>
+            <h2 className="display-heading mt-5 max-w-xl">Service you can feel.</h2>
             <p className="mt-6 max-w-xl text-lg leading-8 text-[#69655f]">
-              Clear communication, professional handling and a team that takes ownership from collection to delivery.
+              Calm communication, considered handling and a team that takes ownership from collection to delivery.
             </p>
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
               {[
@@ -232,7 +233,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <div className="quote-panel w-full overflow-hidden rounded-[2rem] bg-[#ef3340] p-8 text-white shadow-[0_30px_80px_rgba(239,51,64,0.2)] sm:p-12">
               <span className="text-7xl font-black leading-none text-white/20">“</span>
               <p className="-mt-3 text-2xl font-semibold leading-relaxed sm:text-3xl">
-                The best delivery is the one you don’t have to worry about.
+                Premium service is everything you notice—and everything you don’t have to.
               </p>
               <div className="mt-10 h-px bg-white/20" />
               <p className="mt-7 text-sm uppercase tracking-[0.18em] text-white/70">
