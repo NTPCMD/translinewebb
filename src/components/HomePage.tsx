@@ -1,9 +1,49 @@
-import { Truck, Package, Home, CheckCircle, Users, Clock, Shield } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Clock3,
+  Headphones,
+  Home,
+  MapPin,
+  Package,
+  ShieldCheck,
+  Sparkles,
+  Truck,
+} from 'lucide-react';
 import type { Page } from '../App';
+import premiumHero from '../assets/transline-premium-hero.jpg';
 
 interface HomePageProps {
   onNavigate: (page: Page) => void;
 }
+
+const services = [
+  {
+    number: '01',
+    icon: Truck,
+    title: 'Freight delivery',
+    copy: 'Palletised, bulk and general freight moved across Perth and regional WA with the right vehicle for every load.',
+  },
+  {
+    number: '02',
+    icon: Package,
+    title: 'Courier services',
+    copy: 'Responsive delivery for parcels, documents and time-sensitive items—handled carefully from pickup to handover.',
+  },
+  {
+    number: '03',
+    icon: Home,
+    title: 'Removals',
+    copy: 'Reliable residential and commercial moves for furniture, equipment and valuable goods of all shapes and sizes.',
+  },
+];
+
+const fleet = [
+  { title: 'Vans', detail: 'Quick metro delivery', capacity: 'Small loads' },
+  { title: 'Flatbeds', detail: 'Oversized & irregular freight', capacity: 'Open access' },
+  { title: 'Curtainsiders', detail: 'Fast side loading', capacity: 'Flexible loads' },
+  { title: 'Pantechs', detail: 'Protected heavy transport', capacity: '6–14 tonne' },
+];
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const handleNavigate = (page: Page) => {
@@ -12,218 +52,216 @@ export function HomePage({ onNavigate }: HomePageProps) {
   };
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center scroll-reveal">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1766608422198-5be9ac0aac9e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmcmVpZ2h0JTIwdHJ1Y2slMjBoaWdod2F5fGVufDF8fHx8MTc2NzQ1MTY1MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral)',
-          }}
-        >
-          <div className="absolute inset-0 bg-black/50"></div>
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
-          <h1 className="text-white mb-4 max-w-3xl">
-            Reliable Freight & Transport Services Across Perth
-          </h1>
-          <p className="text-xl text-gray-100 mb-8 max-w-2xl">
-            From small parcels to heavy freight, our diverse fleet delivers your goods safely and on time, every time.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={() => handleNavigate('quote')}
-              className="interactive-button bg-[#D32323] text-white px-8 py-3 rounded hover:bg-[#B01E1E]"
-            >
-              Get a Quote
-            </button>
-            <button
-              onClick={() => handleNavigate('contact')}
-              className="interactive-button bg-white text-gray-900 px-8 py-3 rounded hover:bg-gray-100"
-            >
-              Contact Us
-            </button>
-          </div>
-        </div>
-      </section>
+    <div className="overflow-hidden bg-[#f7f4ee]">
+      <section className="hero-grid relative min-h-[760px] bg-[#0c0d0e] text-white lg:min-h-[840px]">
+        <img
+          src={premiumHero}
+          alt="Modern freight truck travelling at dusk"
+          className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,8,9,0.98)_0%,rgba(7,8,9,0.91)_32%,rgba(7,8,9,0.55)_58%,rgba(7,8,9,0.12)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,8,9,0.94)_0%,transparent_48%,rgba(7,8,9,0.18)_100%)]" />
 
-      {/* About Overview */}
-      <section className="py-16 bg-white scroll-reveal">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="mb-6">About Transline Logistics</h2>
-            <p className="text-gray-600 mb-4">
-              Transline Logistics is a trusted provider of freight delivery, courier services, and removals throughout Perth and surrounding areas. With a company-owned fleet ranging from compact vans to 14-tonne pantechs, we match the right vehicle to every job.
+        <div className="relative mx-auto flex min-h-[760px] max-w-[1440px] flex-col justify-center px-5 pb-24 pt-20 sm:px-8 lg:min-h-[840px] lg:px-12 xl:px-20">
+          <div className="scroll-reveal max-w-4xl">
+            <div className="mb-9 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/65">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] backdrop-blur-md">
+                <MapPin className="h-3.5 w-3.5 text-[#ef3340]" />
+              </span>
+              Perth · Western Australia
+            </div>
+            <h1 className="hero-title max-w-3xl text-white">
+              Transport,
+              <span className="block font-light italic text-white/55">elevated.</span>
+            </h1>
+            <p className="mt-8 max-w-xl text-lg leading-8 text-white/66 sm:text-xl">
+              Precision freight and logistics for Perth businesses that expect more—from first contact to final handover.
             </p>
-            <p className="text-gray-600">
-              Whether you need fast courier delivery, palletised freight transport, or full-scale commercial removals, our team ensures your goods arrive safely and on schedule.
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => handleNavigate('quote')}
+                className="interactive-button group bg-[#ef3340] px-8 py-4 text-white hover:bg-[#d91f2c]"
+              >
+                Request a quote
+                <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </button>
+              <button
+                onClick={() => handleNavigate('services')}
+                className="interactive-button border border-white/18 bg-white/[0.06] px-8 py-4 text-white backdrop-blur-md hover:bg-white hover:text-[#171717]"
+              >
+                Explore services
+              </button>
+            </div>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-black/20 backdrop-blur-xl">
+            <div className="mx-auto grid max-w-[1440px] grid-cols-1 px-5 sm:grid-cols-3 sm:px-8 lg:px-12 xl:px-20">
+              {[
+                ['Perth & surrounds', 'Local knowledge'],
+                ['6–14 tonne', 'Pantech capacity'],
+                ['One-off or ongoing', 'Flexible service'],
+              ].map(([value, label], index) => (
+                <div
+                  key={value}
+                  className={`flex items-center gap-4 py-5 sm:px-6 ${index > 0 ? 'hidden border-l border-white/[0.08] sm:flex' : ''}`}
+                >
+                  <Check className="h-5 w-5 shrink-0 text-[#ef3340]" />
+                  <div>
+                    <p className="font-semibold text-white">{value}</p>
+                    <p className="text-xs uppercase tracking-[0.16em] text-white/50">{label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative py-28 sm:py-36">
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12 xl:px-20">
+          <div className="scroll-reveal grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+            <div>
+              <p className="eyebrow">Considered logistics</p>
+              <h2 className="display-heading mt-5">The right move, every time.</h2>
+            </div>
+            <div className="flex flex-col justify-end">
+              <p className="max-w-2xl text-lg leading-8 text-[#66635f]">
+                Every job is planned with intent. Tell us what needs moving and when—we’ll match the vehicle, route and handling plan to the brief.
+              </p>
+              <button
+                onClick={() => handleNavigate('services')}
+                className="text-link group mt-8 w-fit"
+              >
+                See all transport services
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-16 grid gap-5 lg:grid-cols-3">
+            {services.map(({ number, icon: Icon, title, copy }, index) => (
+              <article
+                key={title}
+                className="service-card scroll-reveal group relative min-h-[380px] overflow-hidden p-7 sm:p-9"
+                style={{ '--reveal-delay': `${index * 0.08}s` } as React.CSSProperties}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ef3340] text-white shadow-[0_12px_30px_rgba(239,51,64,0.25)]">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-sm font-semibold tracking-[0.2em] text-[#aba7a0]">{number}</span>
+                </div>
+                <div className="absolute inset-x-7 bottom-8 sm:inset-x-9">
+                  <h3 className="text-2xl text-[#1e1d1b]">{title}</h3>
+                  <p className="mt-4 leading-7 text-[#6d6963]">{copy}</p>
+                  <button onClick={() => handleNavigate('services')} className="text-link mt-6">
+                    Learn more <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="premium-dark relative overflow-hidden bg-[#111315] py-28 text-white sm:py-36">
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12 xl:px-20">
+          <div className="scroll-reveal grid gap-10 lg:grid-cols-2 lg:items-end">
+            <div>
+              <p className="eyebrow text-[#ff5963]">Purpose-built fleet</p>
+              <h2 className="display-heading mt-5 max-w-xl text-white">Capability, without compromise.</h2>
+            </div>
+            <p className="max-w-xl text-lg leading-8 text-white/60 lg:justify-self-end">
+              From nimble vans to 14-tonne pantechs, every vehicle is maintained, ready and selected around the freight—not the other way around.
             </p>
           </div>
+
+          <div className="mt-16 grid border-y border-white/12 sm:grid-cols-2 lg:grid-cols-4">
+            {fleet.map((vehicle, index) => (
+              <div
+                key={vehicle.title}
+                className={`fleet-cell scroll-reveal py-9 sm:p-8 ${index > 0 ? 'border-t border-white/12 sm:border-t-0 sm:border-l' : ''}`}
+              >
+                <span className="mb-12 block text-xs font-semibold uppercase tracking-[0.18em] text-[#ef3340]">
+                  {vehicle.capacity}
+                </span>
+                <Truck className="mb-5 h-9 w-9 text-white/30" strokeWidth={1.5} />
+                <h3 className="text-2xl text-white">{vehicle.title}</h3>
+                <p className="mt-2 text-sm text-white/50">{vehicle.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => handleNavigate('fleet')}
+            className="interactive-button mt-10 bg-white px-7 py-4 text-[#1b1b1a] hover:bg-[#ef3340] hover:text-white"
+          >
+            View the full fleet <ArrowRight className="ml-3 h-5 w-5" />
+          </button>
         </div>
       </section>
 
-      {/* Services Overview */}
-      <section className="py-16 bg-gray-50 scroll-reveal">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center mb-12">Our Services</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Freight Delivery */}
-            <div className="surface-card p-6">
-              <div className="bg-[#FEF2F2] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Truck className="h-6 w-6 text-[#D32323]" />
-              </div>
-              <h3 className="mb-3">Freight Delivery</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Local and regional freight transport for palletised, bulk, and general freight. Reliable service for all load sizes.
-              </p>
-              <button onClick={() => handleNavigate('services')} className="text-button-animate text-[#D32323] text-sm">
-                Learn more →
-              </button>
+      <section className="relative bg-[#fbfaf7] py-28 sm:py-36">
+        <div className="absolute right-0 top-0 h-full w-1/3 bg-[#f7f4ee]" />
+        <div className="relative mx-auto grid max-w-[1440px] gap-14 px-5 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-12 xl:px-20">
+          <div className="scroll-reveal">
+            <p className="eyebrow">Quietly dependable</p>
+            <h2 className="display-heading mt-5 max-w-xl">Service you can feel.</h2>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-[#69655f]">
+              Calm communication, considered handling and a team that takes ownership from collection to delivery.
+            </p>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+              {[
+                [Clock3, 'On-time focus', 'Planned routes and responsive updates.'],
+                [ShieldCheck, 'Handled with care', 'Professional handling at every step.'],
+                [Headphones, 'Real local support', 'Talk to a person who knows the job.'],
+                [Sparkles, 'Flexible by design', 'Built around your freight and schedule.'],
+              ].map(([Icon, title, copy]) => {
+                const FeatureIcon = Icon as typeof Clock3;
+                return (
+                  <div key={title as string} className="rounded-2xl border border-[#e5e0d8] bg-white p-6">
+                    <FeatureIcon className="h-6 w-6 text-[#ef3340]" />
+                    <h3 className="mt-5 text-lg">{title as string}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#74706a]">{copy as string}</p>
+                  </div>
+                );
+              })}
             </div>
+          </div>
 
-            {/* Courier Services */}
-            <div className="surface-card p-6">
-              <div className="bg-[#FEF2F2] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Package className="h-6 w-6 text-[#D32323]" />
-              </div>
-              <h3 className="mb-3">Courier Services</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Fast and secure courier delivery for parcels, documents, and time-sensitive items across metro and regional areas.
+          <div className="scroll-reveal flex items-center lg:pl-10">
+            <div className="quote-panel w-full overflow-hidden rounded-[2rem] bg-[#ef3340] p-8 text-white shadow-[0_30px_80px_rgba(239,51,64,0.2)] sm:p-12">
+              <span className="text-7xl font-black leading-none text-white/20">“</span>
+              <p className="-mt-3 text-2xl font-semibold leading-relaxed sm:text-3xl">
+                Premium service is everything you notice—and everything you don’t have to.
               </p>
-              <button onClick={() => handleNavigate('services')} className="text-button-animate text-[#D32323] text-sm">
-                Learn more →
-              </button>
-            </div>
-
-            {/* Removals */}
-            <div className="surface-card p-6">
-              <div className="bg-[#FEF2F2] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Home className="h-6 w-6 text-[#D32323]" />
-              </div>
-              <h3 className="mb-3">Removals</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Residential and commercial removals with safe handling of furniture, equipment, and goods. Professional service you can trust.
+              <div className="mt-10 h-px bg-white/20" />
+              <p className="mt-7 text-sm uppercase tracking-[0.18em] text-white/70">
+                Reliable by route. Personal by nature.
               </p>
-              <button onClick={() => handleNavigate('services')} className="text-button-animate text-[#D32323] text-sm">
-                Learn more →
-              </button>
-            </div>
-
-            {/* Commercial Transport */}
-            <div className="surface-card p-6">
-              <div className="bg-[#FEF2F2] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Users className="h-6 w-6 text-[#D32323]" />
-              </div>
-              <h3 className="mb-3">Commercial Transport</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Flexible transport solutions for businesses. One-off deliveries or ongoing contracts, we match the right vehicle to your needs.
-              </p>
-              <button onClick={() => handleNavigate('services')} className="text-button-animate text-[#D32323] text-sm">
-                Learn more →
-              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Fleet Overview */}
-      <section className="py-16 bg-white scroll-reveal">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="mb-4">Our Fleet</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Our company-owned fleet includes a wide range of vehicles to handle any transport requirement, from small parcels to heavy commercial loads.
+      <section className="cta-band relative overflow-hidden bg-[#ef3340] py-20 text-white sm:py-24">
+        <div className="relative mx-auto flex max-w-[1440px] flex-col items-start justify-between gap-10 px-5 sm:px-8 lg:flex-row lg:items-center lg:px-12 xl:px-20">
+          <div className="scroll-reveal max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Ready when you are</p>
+            <h2 className="mt-4 text-4xl font-extrabold tracking-[-0.04em] text-white sm:text-6xl">
+              Let’s get it moving.
+            </h2>
+            <p className="mt-5 max-w-xl text-lg text-white/75">
+              Share the pickup, destination and load details. We’ll take it from there.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="surface-card bg-gray-50 p-6 text-center">
-              <h3 className="mb-2">Vans</h3>
-              <p className="text-gray-600 text-sm">Small to large cargo vans for flexible delivery solutions</p>
-            </div>
-            <div className="surface-card bg-gray-50 p-6 text-center">
-              <h3 className="mb-2">Flatbeds</h3>
-              <p className="text-gray-600 text-sm">Open platform trucks for oversized and irregular loads</p>
-            </div>
-            <div className="surface-card bg-gray-50 p-6 text-center">
-              <h3 className="mb-2">Curtainsiders</h3>
-              <p className="text-gray-600 text-sm">Side-loading capability for efficient freight handling</p>
-            </div>
-            <div className="surface-card bg-gray-50 p-6 text-center">
-              <h3 className="mb-2">Pantechs</h3>
-              <p className="text-gray-600 text-sm">6–14 tonne capacity for substantial commercial freight</p>
-            </div>
-          </div>
-          <div className="text-center mt-8">
-            <button onClick={() => handleNavigate('fleet')} className="interactive-button bg-[#D32323] text-white px-8 py-3 rounded hover:bg-[#B01E1E]">
-              View Full Fleet
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us */}
-      <section className="py-16 bg-gray-900 text-white scroll-reveal">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center mb-12 text-white">Why Choose Transline Logistics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-[#D32323] w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="mb-2 text-white">Company-Owned Fleet</h3>
-              <p className="text-gray-300 text-sm">
-                All vehicles maintained to the highest standards for reliable service
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-[#D32323] w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <Truck className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="mb-2 text-white">Flexible Solutions</h3>
-              <p className="text-gray-300 text-sm">
-                Right vehicle for every job, from small parcels to heavy freight
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-[#D32323] w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <Clock className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="mb-2 text-white">On-Time Delivery</h3>
-              <p className="text-gray-300 text-sm">
-                Reliable and punctual service to keep your business moving
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-[#D32323] w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="mb-2 text-white">Safe & Secure</h3>
-              <p className="text-gray-300 text-sm">
-                Professional handling and care for all your goods
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 bg-[#D32323] text-white scroll-reveal">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="mb-4 text-white">Ready to Get Started?</h2>
-          <p className="text-xl text-red-100 mb-8 max-w-2xl mx-auto">
-            Contact us today for a fast quote on your freight, courier, or removals needs.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <button onClick={() => handleNavigate('quote')} className="interactive-button bg-white text-[#D32323] px-8 py-3 rounded hover:bg-gray-100">
-              Get a Quote
-            </button>
-            <button
-              onClick={() => handleNavigate('contact')}
-              className="interactive-button border-2 border-white text-white px-8 py-3 rounded hover:bg-[#B01E1E]"
-            >
-              Contact Us
-            </button>
-          </div>
+          <button
+            onClick={() => handleNavigate('quote')}
+            className="interactive-button group shrink-0 bg-white px-8 py-4 text-[#1b1b1a] hover:bg-[#1b1b1a] hover:text-white"
+          >
+            Request a quote
+            <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
+          </button>
         </div>
       </section>
     </div>
