@@ -1,132 +1,65 @@
-import { Mail, Phone } from 'lucide-react';
+import { ArrowUpRight, Mail, MapPin, Phone } from 'lucide-react';
 import type { Page } from '../App';
-import logo from '../assets/Translines (2).png';
 
 interface FooterProps {
   onNavigate: (page: Page) => void;
 }
 
 export function Footer({ onNavigate }: FooterProps) {
-  const handleNavigate = (page: Page) => {
+  const go = (page: Page) => {
     onNavigate(page);
     window.scrollTo(0, 0);
   };
 
   return (
-    <footer className="bg-gradient-to-b from-[#1B0B0B] via-[#130909] to-[#0B0909] text-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Company Info */}
-          <div className="md:col-span-1">
-            <button
-              type="button"
-              onClick={() => handleNavigate('home')}
-              aria-label="Go to home page"
-              className="interactive-button flex items-center gap-3 mb-4 w-fit rounded-xl bg-[#FEF2F2]/90 px-4 py-2 border border-[#FAD4D4]/80 shadow-lg shadow-[#D32323]/10"
-            >
-              <img
-                src={logo}
-                alt="Transline Logistics"
-                className="h-10 w-auto animate-logo-pop transition-transform duration-300 ease-out hover:scale-105 drop-shadow-sm"
-              />
-              <span className="text-sm font-semibold text-[#8A1B1B] tracking-wide">
-                Transline Logistics
-              </span>
+    <footer className="bg-[#161616] text-white">
+      <div className="mx-auto max-w-[1440px] px-5 pb-8 pt-16 sm:px-8 lg:px-12 lg:pt-20 xl:px-20">
+        <div className="grid gap-12 border-b border-white/10 pb-14 lg:grid-cols-[1.3fr_0.7fr_0.7fr_1fr]">
+          <div>
+            <button onClick={() => go('home')} className="text-left">
+              <span className="block text-3xl font-black italic tracking-[-0.05em]">TRANSLINE</span>
+              <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.35em] text-[#ef3340]">Logistics</span>
             </button>
-            <p className="text-sm text-gray-300/90">
-              Reliable freight and transport solutions across Perth.
+            <p className="mt-6 max-w-sm leading-7 text-white/55">
+              Dependable freight, courier and removal solutions across Perth and surrounding areas.
             </p>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h3 className="text-white mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <button
-                  onClick={() => handleNavigate('home')}
-                  className="text-sm text-button-animate hover:text-white"
-                >
-                  Home
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavigate('services')}
-                  className="text-sm text-button-animate hover:text-white"
-                >
-                  Services
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavigate('fleet')}
-                  className="text-sm text-button-animate hover:text-white"
-                >
-                  Fleet
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavigate('faq')}
-                  className="text-sm text-button-animate hover:text-white"
-                >
-                  FAQ
-                </button>
-              </li>
-            </ul>
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-white/35">Explore</p>
+            <div className="space-y-3">
+              {([['Services', 'services'], ['Our fleet', 'fleet'], ['FAQs', 'faq'], ['Contact', 'contact']] as [string, Page][]).map(([label, page]) => (
+                <button key={page} onClick={() => go(page)} className="block text-sm text-white/65 transition-colors hover:text-white">{label}</button>
+              ))}
+            </div>
           </div>
 
-          {/* Services */}
           <div>
-            <h3 className="text-white mb-4">Services</h3>
-            <ul className="space-y-2 text-sm">
-              <li>Freight Delivery</li>
-              <li>Courier Services</li>
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-white/35">Services</p>
+            <ul className="space-y-3 text-sm text-white/65">
+              <li>Freight delivery</li>
+              <li>Courier services</li>
               <li>Removals</li>
-              <li>Commercial Transport</li>
+              <li>Commercial transport</li>
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h3 className="text-white mb-4">Contact</h3>
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4" />
-                <span>0466582734</span>
-              </li>
-              <li className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4" />
-                <span>admin@translinelogistics.org</span>
-              </li>
-            </ul>
-            <button
-              onClick={() => handleNavigate('quote')}
-              className="interactive-button mt-4 bg-[#D32323] text-white px-6 py-2 rounded hover:bg-[#B01E1E] text-sm"
-            >
-              Get a Quote
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-white/35">Get in touch</p>
+            <a href="tel:0466582734" className="mb-3 flex items-center gap-3 text-sm text-white/70 hover:text-white"><Phone className="h-4 w-4 text-[#ef3340]" /> 0466 582 734</a>
+            <a href="mailto:admin@translinelogistics.org" className="mb-3 flex items-center gap-3 break-all text-sm text-white/70 hover:text-white"><Mail className="h-4 w-4 shrink-0 text-[#ef3340]" /> admin@translinelogistics.org</a>
+            <p className="flex items-center gap-3 text-sm text-white/70"><MapPin className="h-4 w-4 text-[#ef3340]" /> Perth, Western Australia</p>
+            <button onClick={() => go('quote')} className="mt-7 inline-flex items-center text-sm font-semibold text-white hover:text-[#ef3340]">
+              Request a quote <ArrowUpRight className="ml-2 h-4 w-4" />
             </button>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-gray-400">
-            © {new Date().getFullYear()} Transline Logistics. All rights reserved.
-          </p>
-          <div className="flex gap-6 text-sm">
-            <button
-              onClick={() => handleNavigate('privacy')}
-              className="text-button-animate hover:text-white"
-            >
-              Privacy Policy
-            </button>
-            <button
-              onClick={() => handleNavigate('terms')}
-              className="text-button-animate hover:text-white"
-            >
-              Terms & Conditions
-            </button>
+        <div className="flex flex-col gap-5 pt-7 text-xs text-white/35 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Transline Logistics. All rights reserved.</p>
+          <div className="flex gap-6">
+            <button onClick={() => go('privacy')} className="hover:text-white">Privacy</button>
+            <button onClick={() => go('terms')} className="hover:text-white">Terms</button>
           </div>
         </div>
       </div>

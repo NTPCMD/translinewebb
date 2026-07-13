@@ -1,4 +1,4 @@
-import { Menu, X } from 'lucide-react';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import type { Page } from '../App';
 import logo from '../assets/Translines (2).png';
@@ -10,7 +10,6 @@ interface HeaderProps {
 
 export function Header({ currentPage, onNavigate }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const navItems: { label: string; page: Page }[] = [
     { label: 'Home', page: 'home' },
     { label: 'Services', page: 'services' },
@@ -26,78 +25,65 @@ export function Header({ currentPage, onNavigate }: HeaderProps) {
   };
 
   return (
-    <header className="bg-gradient-to-r from-white via-[#FFF7F7] to-white border-b border-[#FAD4D4]/70 shadow-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <button
-            onClick={() => handleNavigate('home')}
-            className="interactive-button flex items-center gap-3 bg-[#FEF2F2]/80 px-4 py-2 rounded-xl border border-[#FAD4D4]/80 shadow-sm"
-          >
-            <img
-              src={logo}
-              alt="Transline Logistics"
-              className="h-12 w-auto animate-logo-pop drop-shadow-sm transition-transform duration-300 ease-out hover:scale-105"
-            />
-          </button>
+    <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f7f4ee]/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-20">
+        <button onClick={() => handleNavigate('home')} className="group flex items-center gap-3" aria-label="Transline Logistics home">
+          <span className="h-11 w-11 overflow-hidden rounded-xl bg-[#c9182b] shadow-[0_8px_24px_rgba(201,24,43,0.18)]">
+            <img src={logo} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          </span>
+          <span className="text-left">
+            <span className="block text-lg font-black italic leading-none tracking-[-0.04em] text-[#1b1b1a]">TRANSLINE</span>
+            <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.26em] text-[#77716a]">Logistics</span>
+          </span>
+        </button>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navItems.map((item) => (
-              <button
-                key={item.page}
-                onClick={() => handleNavigate(item.page)}
-                className={`text-button-animate ${
-                  currentPage === item.page
-                    ? 'text-[#D32323]'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+        <nav className="hidden items-center gap-1 lg:flex">
+          {navItems.map((item) => (
             <button
-              onClick={() => handleNavigate('quote')}
-              className="interactive-button bg-[#D32323] text-white px-6 py-2 rounded hover:bg-[#B01E1E]"
+              key={item.page}
+              onClick={() => handleNavigate(item.page)}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                currentPage === item.page ? 'bg-[#1b1b1a] text-white' : 'text-[#5e5a54] hover:bg-black/5 hover:text-[#1b1b1a]'
+              }`}
             >
-              Get a Quote
+              {item.label}
             </button>
-          </nav>
+          ))}
+        </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-gray-600 hover:text-[#D32323] transition-colors"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
+        <button
+          onClick={() => handleNavigate('quote')}
+          className="interactive-button hidden bg-[#ef3340] px-5 py-3 text-sm text-white hover:bg-[#d91f2c] lg:inline-flex"
+        >
+          Get a quote <ArrowUpRight className="ml-2 h-4 w-4" />
+        </button>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden py-4 border-t border-gray-200">
-            {navItems.map((item) => (
-              <button
-                key={item.page}
-                onClick={() => handleNavigate(item.page)}
-                className={`block w-full text-left px-4 py-3 text-button-animate ${
-                  currentPage === item.page
-                    ? 'text-[#D32323] bg-[#FEF2F2]'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-            <button
-              onClick={() => handleNavigate('quote')}
-              className="interactive-button w-full mt-2 bg-[#D32323] text-white px-4 py-3 rounded hover:bg-[#B01E1E]"
-            >
-              Get a Quote
-            </button>
-          </nav>
-        )}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 text-[#1b1b1a] lg:hidden"
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
+
+      {mobileMenuOpen && (
+        <nav className="border-t border-black/10 bg-[#f7f4ee] px-5 py-5 lg:hidden">
+          {navItems.map((item) => (
+            <button
+              key={item.page}
+              onClick={() => handleNavigate(item.page)}
+              className={`block w-full border-b border-black/8 px-2 py-4 text-left text-lg font-semibold ${currentPage === item.page ? 'text-[#ef3340]' : 'text-[#1b1b1a]'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+          <button onClick={() => handleNavigate('quote')} className="interactive-button mt-5 w-full bg-[#ef3340] px-5 py-4 text-white">
+            Get a quote <ArrowUpRight className="ml-2 h-4 w-4" />
+          </button>
+        </nav>
+      )}
     </header>
   );
 }

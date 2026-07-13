@@ -23,7 +23,7 @@
   --border: rgba(0, 0, 0, 0.1);
   --input: #f3f3f5;
   --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: #030213;
@@ -41,11 +41,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
   h1 {
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.2;
   }
 
@@ -74,6 +75,11 @@
     line-height: 1.5;
   }
 
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   html {
     font-size: var(--font-size);
     scroll-behavior: smooth;
@@ -83,14 +89,14 @@
 
 @layer components {
   .interactive-button {
-    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D32323]/60 focus:ring-offset-white;
-    box-shadow: 0 12px 32px rgba(211, 35, 35, 0.14);
+    @apply inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ef3340]/60;
+    box-shadow: 0 12px 32px rgba(20, 20, 20, 0.12);
     transform: translateY(0);
   }
 
   .interactive-button:hover {
     transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 18px 44px rgba(211, 35, 35, 0.18);
+    box-shadow: 0 18px 44px rgba(20, 20, 20, 0.18);
   }
 
   .interactive-button:active {
@@ -135,6 +141,99 @@
     box-shadow: 0 22px 50px rgba(3, 2, 19, 0.08);
     border-color: #f3d8d8;
   }
+
+  .hero-title {
+    font-size: clamp(3.35rem, 8vw, 7.5rem);
+    font-weight: 850;
+    line-height: 0.9;
+    letter-spacing: -0.065em;
+  }
+
+  .display-heading {
+    font-size: clamp(2.5rem, 5vw, 4.75rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.055em;
+    color: #1b1b1a;
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ef3340;
+  }
+
+  .text-link {
+    @apply inline-flex items-center gap-2 text-sm font-semibold text-[#1b1b1a] transition-colors;
+  }
+
+  .text-link:hover {
+    color: #ef3340;
+  }
+
+  .service-card {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #e5e0d8;
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 60px rgba(35, 31, 26, 0.06);
+    transition: transform 350ms ease, box-shadow 350ms ease, border-color 350ms ease;
+  }
+
+  .service-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 15% 10%, rgba(239, 51, 64, 0.08), transparent 42%);
+    opacity: 0;
+    transition: opacity 350ms ease;
+  }
+
+  .service-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(239, 51, 64, 0.35);
+    box-shadow: 0 28px 80px rgba(35, 31, 26, 0.12);
+  }
+
+  .service-card:hover::before {
+    opacity: 1;
+  }
+
+  .fleet-cell {
+    transition: background 250ms ease;
+  }
+
+  .fleet-cell:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.hero-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  background-image: linear-gradient(rgba(255,255,255,.28) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.28) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to right, black, transparent 70%);
+}
+
+.quote-panel {
+  background-image: radial-gradient(circle at 90% 10%, rgba(255,255,255,.2), transparent 32%);
+}
+
+.cta-band::before {
+  content: '';
+  position: absolute;
+  right: -8%;
+  top: -90%;
+  width: 34rem;
+  height: 34rem;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 50%;
+  box-shadow: 0 0 0 70px rgba(255,255,255,.05), 0 0 0 140px rgba(255,255,255,.035);
 }
 
 @keyframes logo-pop {
