@@ -35,6 +35,32 @@ async function fetchIsAdmin(userId: string): Promise<boolean> {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// gotrue serializes auth work behind a navigator.locks lock that is shared across
+// every tab of the origin. A lock held by another (stuck) tab makes getSession()
+// wait forever, which leaves `loading` true and strands the portal on its startup
+// spinner with no way out. Bound the wait so a stalled lock acquisition falls
+// through to the unauthenticated state (which routes to /login) instead of hanging.
+const AUTH_INIT_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} did not settle within ${ms}ms`)),
+      ms,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 function logLogoutSource(reason: string) {
   console.error('[AUTH LOGOUT SOURCE]', reason);
 }
@@ -51,7 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const {
           data: { session: currentSession },
-        } = await supabase.auth.getSession();
+        } = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_INIT_TIMEOUT_MS,
+          'supabase.auth.getSession()',
+        );
 
         if (currentSession) {
           setSession(currentSession);
