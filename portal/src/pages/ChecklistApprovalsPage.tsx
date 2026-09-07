@@ -17,9 +17,9 @@ import { formatPerthDateTime, PERTH_TIME_LABEL } from '@/lib/dateTime';
 
 const statusBadgeClass = (status: string) => {
   const normalized = status.trim().toLowerCase();
-  if (normalized === 'approved') return 'bg-green-950 text-green-400 border-green-900';
-  if (normalized === 'rejected') return 'bg-red-950 text-red-400 border-red-900';
-  return 'bg-yellow-950 text-yellow-300 border-yellow-900';
+  if (normalized === 'approved') return 'bg-green-50 text-green-700 border-green-200';
+  if (normalized === 'rejected') return 'bg-red-50 text-red-700 border-red-200';
+  return 'bg-yellow-50 text-yellow-800 border-yellow-200';
 };
 
 const isPendingStatus = (status: string) => {
@@ -101,85 +101,85 @@ function ChecklistViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl border-[#D7D3CA] bg-[#FFFEFA] text-gray-100">
+      <DialogContent className="max-w-3xl border-border bg-card text-foreground">
         <DialogHeader>
-          <DialogTitle className="text-white">Checklist Request Details</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-foreground">Checklist Request Details</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Failed pre-start checklist details. Times shown in {PERTH_TIME_LABEL}.
           </DialogDescription>
         </DialogHeader>
 
         {!request ? (
-          <p className="text-sm text-gray-400">No checklist selected.</p>
+          <p className="text-sm text-muted-foreground">No checklist selected.</p>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-              <p className="text-gray-300">Requested: <span className="text-white">{formatPerthDateTime(request.requested_at)}</span></p>
-              <p className="text-gray-300">Status: <span className="text-white capitalize">{request.status}</span></p>
-              <p className="text-gray-300">Driver: <span className="text-white">{request.driver_name ?? request.driver_id ?? 'Unknown'}</span></p>
-              <p className="text-gray-300">Vehicle: <span className="text-white">{request.vehicle_rego ?? request.vehicle_id ?? 'Unknown'}</span></p>
+              <p className="text-foreground">Requested: <span className="text-foreground">{formatPerthDateTime(request.requested_at)}</span></p>
+              <p className="text-foreground">Status: <span className="text-foreground capitalize">{request.status}</span></p>
+              <p className="text-foreground">Driver: <span className="text-foreground">{request.driver_name ?? request.driver_id ?? 'Unknown'}</span></p>
+              <p className="text-foreground">Vehicle: <span className="text-foreground">{request.vehicle_rego ?? request.vehicle_id ?? 'Unknown'}</span></p>
             </div>
 
-            <div className="rounded-lg border border-[#D7D3CA] bg-[#F5F2EB] p-3">
-              <p className="mb-2 text-sm font-semibold text-white">Failed Items ({request.failed_items_count})</p>
+            <div className="rounded-lg border border-border bg-background p-3">
+              <p className="mb-2 text-sm font-semibold text-foreground">Failed Items ({request.failed_items_count})</p>
               {request.failed_items.length === 0 ? (
-                <p className="text-sm text-gray-500">No structured failed item list was saved.</p>
+                <p className="text-sm text-muted-foreground">No structured failed item list was saved.</p>
               ) : (
                 <div className="space-y-2">
                   {request.failed_items.map((item) => (
-                    <div key={`${request.request_id}-${item.key}`} className="rounded border border-[#C4C0B7] p-2 text-sm">
+                    <div key={`${request.request_id}-${item.key}`} className="rounded border border-input p-2 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-white font-medium">{item.label}</p>
+                        <p className="text-foreground font-medium">{item.label}</p>
                         {item.sectionTitle && (
-                          <span className="inline-flex items-center rounded border border-[#C4C0B7] bg-[#111111] px-2 py-0.5 text-[11px] text-gray-300">
+                          <span className="inline-flex items-center rounded border border-input bg-muted px-2 py-0.5 text-[11px] text-foreground">
                             {item.sectionTitle}
                           </span>
                         )}
                         {item.critical && (
-                          <span className="inline-flex items-center rounded border border-red-800 bg-red-950 px-2 py-0.5 text-[11px] text-red-300">
+                          <span className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] text-red-700">
                             Critical
                           </span>
                         )}
                       </div>
-                      {item.notes && <p className="text-gray-400">Note: {item.notes}</p>}
+                      {item.notes && <p className="text-muted-foreground">Note: {item.notes}</p>}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="rounded-lg border border-[#D7D3CA] bg-[#F5F2EB] p-3">
-              <p className="mb-2 text-sm font-semibold text-white">Full Checklist ({checklistEntries.length})</p>
+            <div className="rounded-lg border border-border bg-background p-3">
+              <p className="mb-2 text-sm font-semibold text-foreground">Full Checklist ({checklistEntries.length})</p>
               {checklistEntries.length === 0 ? (
-                <p className="text-sm text-gray-500">No checklist snapshot was saved for this request.</p>
+                <p className="text-sm text-muted-foreground">No checklist snapshot was saved for this request.</p>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {checklistEntries.map((item) => (
-                    <div key={`${request.request_id}-${item.key}-full`} className="rounded border border-[#C4C0B7] p-2 text-sm">
+                    <div key={`${request.request_id}-${item.key}-full`} className="rounded border border-input p-2 text-sm">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-gray-200 font-medium">{item.label}</p>
+                        <p className="text-foreground font-medium">{item.label}</p>
                         <span
                           className={
                             item.status === 'Fail'
-                              ? 'text-red-400'
+                              ? 'text-red-700'
                               : item.status === 'Pass'
-                                ? 'text-green-400'
-                                : 'text-yellow-300'
+                                ? 'text-green-700'
+                                : 'text-yellow-800'
                           }
                         >
                           {item.status}
                         </span>
                       </div>
-                      {item.note && <p className="text-gray-400 mt-1">{item.note}</p>}
+                      {item.note && <p className="text-muted-foreground mt-1">{item.note}</p>}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="rounded-lg border border-[#D7D3CA] bg-[#F5F2EB] p-3">
-              <p className="mb-2 text-sm font-semibold text-white">Admin Note</p>
-              <p className="text-sm text-gray-300">{request.admin_note ?? 'No admin note yet.'}</p>
+            <div className="rounded-lg border border-border bg-background p-3">
+              <p className="mb-2 text-sm font-semibold text-foreground">Admin Note</p>
+              <p className="text-sm text-foreground">{request.admin_note ?? 'No admin note yet.'}</p>
             </div>
           </div>
         )}
@@ -298,22 +298,22 @@ export function ChecklistApprovalsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-300">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Checklist Approvals</h1>
-          <p className="text-gray-400">Admin workflow for failed pre-start checklist requests. All times shown in {PERTH_TIME_LABEL}.</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Checklist Approvals</h1>
+          <p className="text-muted-foreground">Admin workflow for failed pre-start checklist requests. All times shown in {PERTH_TIME_LABEL}.</p>
         </div>
         <Button
           variant="outline"
           onClick={load}
-          className="border-[#C4C0B7] bg-[#F5F2EB] text-gray-200 hover:bg-[#1C1C1C] hover:text-white"
+          className="border-input bg-background text-foreground hover:bg-muted hover:text-foreground"
           disabled={loading}
         >
           {loading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -322,40 +322,40 @@ export function ChecklistApprovalsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Pending</p>
-            <p className="text-3xl font-bold text-red-400">{loading ? '-' : pendingCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Pending</p>
+            <p className="text-3xl font-bold text-red-700">{loading ? '-' : pendingCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Approved</p>
-            <p className="text-3xl font-bold text-green-400">{loading ? '-' : approvedCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Approved</p>
+            <p className="text-3xl font-bold text-green-700">{loading ? '-' : approvedCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Rejected</p>
-            <p className="text-3xl font-bold text-yellow-300">{loading ? '-' : rejectedCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Rejected</p>
+            <p className="text-3xl font-bold text-yellow-800">{loading ? '-' : rejectedCount}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-white">Approval Requests</CardTitle>
-              <CardDescription className="text-gray-400">Review failed checklist submissions and unblock or reject drivers.</CardDescription>
+              <CardTitle className="text-foreground">Approval Requests</CardTitle>
+              <CardDescription className="text-muted-foreground">Review failed checklist submissions and unblock or reject drivers.</CardDescription>
             </div>
             <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by driver, vehicle, status..."
-                className="pl-10 bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -369,21 +369,21 @@ export function ChecklistApprovalsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Requested time</TableHead>
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400">Failed items count</TableHead>
-                    <TableHead className="text-gray-400 min-w-[260px]">Failed item details</TableHead>
-                    <TableHead className="text-gray-400 min-w-[260px]">Admin note</TableHead>
-                    <TableHead className="text-gray-400 min-w-[280px]">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Requested time</TableHead>
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Failed items count</TableHead>
+                    <TableHead className="text-muted-foreground min-w-[260px]">Failed item details</TableHead>
+                    <TableHead className="text-muted-foreground min-w-[260px]">Admin note</TableHead>
+                    <TableHead className="text-muted-foreground min-w-[280px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-8 text-center text-gray-500">
+                      <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                         No checklist approval requests found.
                       </TableCell>
                     </TableRow>
@@ -393,21 +393,21 @@ export function ChecklistApprovalsPage() {
                       const busy = busyId === request.request_id;
 
                       return (
-                        <TableRow key={request.request_id} className="border-[#D7D3CA] align-top">
-                          <TableCell className="text-gray-300">{formatPerthDateTime(request.requested_at)}</TableCell>
-                          <TableCell className="text-gray-200">{request.driver_name ?? request.driver_id ?? 'Unknown'}</TableCell>
-                          <TableCell className="text-gray-200">{request.vehicle_rego ?? request.vehicle_id ?? 'Unknown'}</TableCell>
+                        <TableRow key={request.request_id} className="border-border align-top">
+                          <TableCell className="text-foreground">{formatPerthDateTime(request.requested_at)}</TableCell>
+                          <TableCell className="text-foreground">{request.driver_name ?? request.driver_id ?? 'Unknown'}</TableCell>
+                          <TableCell className="text-foreground">{request.vehicle_rego ?? request.vehicle_id ?? 'Unknown'}</TableCell>
                           <TableCell>
                             <Badge className={`${statusBadgeClass(request.status)} capitalize`}>
                               {request.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-gray-200">{request.failed_items_count}</TableCell>
-                          <TableCell className="text-gray-300 text-sm">{getFailedItemSummary(request)}</TableCell>
+                          <TableCell className="text-foreground">{request.failed_items_count}</TableCell>
+                          <TableCell className="text-foreground text-sm">{getFailedItemSummary(request)}</TableCell>
                           <TableCell className="space-y-2">
-                            <p className="text-sm text-gray-300">{request.admin_note ?? 'No note'}</p>
+                            <p className="text-sm text-foreground">{request.admin_note ?? 'No note'}</p>
                             {!isPending && request.admin_note && request.note_visible_to_driver ? (
-                              <p className="text-xs text-green-500">Visible to driver</p>
+                              <p className="text-xs text-green-700">Visible to driver</p>
                             ) : null}
                             {isPending && (
                               <>
@@ -417,7 +417,7 @@ export function ChecklistApprovalsPage() {
                                     setApproveNoteById((prev) => ({ ...prev, [request.request_id]: event.target.value }))
                                   }
                                   placeholder="Optional approval note"
-                                  className="min-h-16 bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                                  className="min-h-16 bg-background border-input text-foreground"
                                 />
                                 <Textarea
                                   value={rejectNoteById[request.request_id] ?? ''}
@@ -425,9 +425,9 @@ export function ChecklistApprovalsPage() {
                                     setRejectNoteById((prev) => ({ ...prev, [request.request_id]: event.target.value }))
                                   }
                                   placeholder="Required reject note"
-                                  className="min-h-16 bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                                  className="min-h-16 bg-background border-input text-foreground"
                                 />
-                                <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
                                   <input
                                     type="checkbox"
                                     checked={noteVisibleById[request.request_id] ?? false}
@@ -446,7 +446,7 @@ export function ChecklistApprovalsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-[#C4C0B7] bg-[#F5F2EB] text-gray-200 hover:bg-[#1C1C1C] hover:text-white"
+                                className="border-input bg-background text-foreground hover:bg-muted hover:text-foreground"
                                 onClick={() => setViewing(request)}
                               >
                                 <ShieldAlert className="mr-1 h-4 w-4" />
@@ -457,7 +457,7 @@ export function ChecklistApprovalsPage() {
                                 <>
                                   <Button
                                     size="sm"
-                                    className="bg-green-600 text-white hover:bg-green-500"
+                                    className="bg-green-700 text-white hover:bg-green-800"
                                     disabled={busy}
                                     onClick={() => handleApprove(request)}
                                   >
@@ -466,7 +466,7 @@ export function ChecklistApprovalsPage() {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    className="bg-red-600 text-white hover:bg-red-500"
+                                    className="bg-red-700 text-white hover:bg-red-800"
                                     disabled={busy}
                                     onClick={() => handleReject(request)}
                                   >
@@ -475,7 +475,7 @@ export function ChecklistApprovalsPage() {
                                   </Button>
                                 </>
                               ) : (
-                                <p className="text-xs text-gray-500">Request already finalized.</p>
+                                <p className="text-xs text-muted-foreground">Request already finalized.</p>
                               )}
                             </div>
                           </TableCell>

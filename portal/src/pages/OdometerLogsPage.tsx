@@ -245,26 +245,26 @@ export function OdometerLogsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="border-red-900 bg-red-950">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div>
-        <h1 className="mb-2 text-3xl font-bold text-white">Odometer Logs</h1>
-        <p className="text-gray-400">One row per shift with start and end odometer readings, photos, and distance. All times shown in {PERTH_TIME_LABEL}.</p>
+        <h1 className="mb-2 text-3xl font-bold text-foreground">Odometer Logs</h1>
+        <p className="text-muted-foreground">One row per shift with start and end odometer readings, photos, and distance. All times shown in {PERTH_TIME_LABEL}.</p>
       </div>
 
-      <Card className="border-[#D7D3CA] bg-[#FFFEFA]">
+      <Card className="border-border bg-card">
         <CardContent className="p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-gray-400">Current Odometer</p>
+              <p className="text-sm text-muted-foreground">Current Odometer</p>
               <div className="mt-2 w-full md:w-64">
                 <Select value={currentOdometerVehicleId} onValueChange={setCurrentOdometerVehicleId}>
-                  <SelectTrigger className="border-[#C4C0B7] bg-[#F5F2EB] text-white">
+                  <SelectTrigger className="border-input bg-background text-foreground">
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
@@ -278,11 +278,11 @@ export function OdometerLogsPage() {
                 </Select>
               </div>
             </div>
-            <p className="text-4xl font-bold text-white">
+            <p className="text-4xl font-bold text-foreground">
             {currentOdometerValue != null ? `${currentOdometerValue.toLocaleString()} km` : 'No reading yet'}
             </p>
             {latestRecordedAt && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Recorded: {formatPerthDateTime(latestRecordedAt)}
               </p>
             )}
@@ -290,16 +290,16 @@ export function OdometerLogsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-[#D7D3CA] bg-[#FFFEFA]">
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-white">Filters</CardTitle>
-          <CardDescription className="text-gray-400">Filter by driver, vehicle, and shift date.</CardDescription>
+          <CardTitle className="text-foreground">Filters</CardTitle>
+          <CardDescription className="text-muted-foreground">Filter by driver, vehicle, and shift date.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="space-y-2">
-            <Label className="text-gray-300">Driver</Label>
+            <Label className="text-foreground">Driver</Label>
             <Select value={driverFilter} onValueChange={setDriverFilter}>
-              <SelectTrigger className="border-[#C4C0B7] bg-[#F5F2EB] text-white">
+              <SelectTrigger className="border-input bg-background text-foreground">
                 <SelectValue placeholder="All drivers" />
               </SelectTrigger>
               <SelectContent>
@@ -314,9 +314,9 @@ export function OdometerLogsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-300">Vehicle</Label>
+            <Label className="text-foreground">Vehicle</Label>
             <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-              <SelectTrigger className="border-[#C4C0B7] bg-[#F5F2EB] text-white">
+              <SelectTrigger className="border-input bg-background text-foreground">
                 <SelectValue placeholder="All vehicles" />
               </SelectTrigger>
               <SelectContent>
@@ -331,31 +331,31 @@ export function OdometerLogsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-300">Start date</Label>
+            <Label className="text-foreground">Start date</Label>
             <Input
               type="date"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
-              className="border-[#C4C0B7] bg-[#F5F2EB] text-white"
+              className="border-input bg-background text-foreground"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-300">End date</Label>
+            <Label className="text-foreground">End date</Label>
             <Input
               type="date"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
-              className="border-[#C4C0B7] bg-[#F5F2EB] text-white"
+              className="border-input bg-background text-foreground"
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-[#D7D3CA] bg-[#FFFEFA]">
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-white">Shift Odometers</CardTitle>
-          <CardDescription className="text-gray-400">{totalCount} total shifts</CardDescription>
+          <CardTitle className="text-foreground">Shift Odometers</CardTitle>
+          <CardDescription className="text-muted-foreground">{totalCount} total shifts</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -366,22 +366,22 @@ export function OdometerLogsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Shift Time</TableHead>
-                    <TableHead className="text-gray-400">Start KM</TableHead>
-                    <TableHead className="text-gray-400">End KM</TableHead>
-                    <TableHead className="text-gray-400">Distance</TableHead>
-                    <TableHead className="text-gray-400">Start Photo</TableHead>
-                    <TableHead className="text-gray-400">End Photo</TableHead>
-                    <TableHead className="text-right text-gray-400">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Shift Time</TableHead>
+                    <TableHead className="text-muted-foreground">Start KM</TableHead>
+                    <TableHead className="text-muted-foreground">End KM</TableHead>
+                    <TableHead className="text-muted-foreground">Distance</TableHead>
+                    <TableHead className="text-muted-foreground">Start Photo</TableHead>
+                    <TableHead className="text-muted-foreground">End Photo</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-8 text-center text-gray-500">
+                      <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                         No odometer shifts found
                       </TableCell>
                     </TableRow>
@@ -427,11 +427,11 @@ export function OdometerLogsPage() {
                               <button
                                 type="button"
                                 onClick={() => setPreviewImage({ url, title })}
-                                className="h-12 w-16 overflow-hidden rounded border border-[#C4C0B7]"
+                                className="h-12 w-16 overflow-hidden rounded border border-input"
                               >
                                 <img src={url} alt={title} className="h-full w-full object-cover" />
                               </button>
-                              <Button asChild variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                              <Button asChild variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                                 <a href={url} download>
                                   <Download className="h-4 w-4" />
                                 </a>
@@ -442,7 +442,7 @@ export function OdometerLogsPage() {
 
                         if (!photoPath) {
                           return (
-                            <span className="flex items-center gap-2 text-gray-500">
+                            <span className="flex items-center gap-2 text-muted-foreground">
                               <ImageIcon className="h-4 w-4" />
                               No photo
                             </span>
@@ -451,12 +451,12 @@ export function OdometerLogsPage() {
 
                         if (photoError) {
                           return (
-                            <div className="flex items-center gap-2 text-sm text-red-400">
+                            <div className="flex items-center gap-2 text-sm text-red-700">
                               <span>Photo failed</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-red-300 hover:text-red-200"
+                                className="text-red-700 hover:text-red-700"
                                 onClick={() => handlePhotoRetry(row, side)}
                               >
                                 Retry
@@ -466,7 +466,7 @@ export function OdometerLogsPage() {
                         }
 
                         return (
-                          <span className="flex items-center gap-2 text-gray-500">
+                          <span className="flex items-center gap-2 text-muted-foreground">
                             <ImageIcon className="h-4 w-4" />
                             No photo
                           </span>
@@ -474,26 +474,26 @@ export function OdometerLogsPage() {
                       };
 
                       return (
-                        <TableRow key={row.shift_id} className="border-[#D7D3CA]">
-                          <TableCell className="text-gray-300">{row.driver_name ?? row.driver_id ?? 'Unknown driver'}</TableCell>
-                          <TableCell className="text-gray-300">{formatVehicleLabel(vehicle, row.vehicle_rego)}</TableCell>
-                          <TableCell className="text-gray-300">
+                        <TableRow key={row.shift_id} className="border-border">
+                          <TableCell className="text-foreground">{row.driver_name ?? row.driver_id ?? 'Unknown driver'}</TableCell>
+                          <TableCell className="text-foreground">{formatVehicleLabel(vehicle, row.vehicle_rego)}</TableCell>
+                          <TableCell className="text-foreground">
                             <div className="space-y-1 text-xs">
                               <div>
-                                <span className="text-gray-500">Start:</span> {formatDateTime(row.start_captured_at)}
+                                <span className="text-muted-foreground">Start:</span> {formatDateTime(row.start_captured_at)}
                               </div>
                               <div>
-                                <span className="text-gray-500">End:</span> {formatDateTime(row.end_captured_at)}
+                                <span className="text-muted-foreground">End:</span> {formatDateTime(row.end_captured_at)}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-gray-300">
+                          <TableCell className="text-foreground">
                             {hasStartReading ? `${row.odometer_start?.toLocaleString()} km` : 'Pending'}
                           </TableCell>
-                          <TableCell className={endKmLabel === 'Missing end odometer' ? 'text-amber-300' : 'text-gray-300'}>
+                          <TableCell className={endKmLabel === 'Missing end odometer' ? 'text-amber-800' : 'text-foreground'}>
                             {endKmLabel}
                           </TableCell>
-                          <TableCell className={distanceLabel === 'Invalid odometer' ? 'text-red-400' : 'text-gray-300'}>
+                          <TableCell className={distanceLabel === 'Invalid odometer' ? 'text-red-700' : 'text-foreground'}>
                             {distanceLabel}
                           </TableCell>
                           <TableCell>
@@ -506,7 +506,7 @@ export function OdometerLogsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 px-2 text-xs text-blue-400 hover:text-blue-300"
+                              className="h-8 px-2 text-xs text-blue-700 hover:text-blue-700"
                               onClick={() => navigate(`/shifts/${row.shift_id}`)}
                             >
                               View Shift
@@ -522,14 +522,14 @@ export function OdometerLogsPage() {
           )}
 
           <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Page {page} of {totalPages}
             </p>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-300"
+                className="text-foreground"
                 disabled={page === 1}
                 onClick={() => setPage((previous) => Math.max(1, previous - 1))}
               >
@@ -538,7 +538,7 @@ export function OdometerLogsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-300"
+                className="text-foreground"
                 disabled={page >= totalPages}
                 onClick={() => setPage((previous) => Math.min(totalPages, previous + 1))}
               >
@@ -550,9 +550,9 @@ export function OdometerLogsPage() {
       </Card>
 
       <Dialog open={Boolean(previewImage)} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="max-w-2xl border-[#D7D3CA] bg-[#FFFEFA]">
+        <DialogContent className="max-w-2xl border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-white">{previewImage?.title ?? 'Odometer Photo'}</DialogTitle>
+            <DialogTitle className="text-foreground">{previewImage?.title ?? 'Odometer Photo'}</DialogTitle>
           </DialogHeader>
           {previewImage && <img src={previewImage.url} alt={previewImage.title} className="w-full rounded-lg" />}
         </DialogContent>

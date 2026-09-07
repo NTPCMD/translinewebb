@@ -139,25 +139,28 @@ export function GlobalSearch() {
     vehicle: 'Vehicle',
   };
   const kindColors: Record<ResultKind, string> = {
-    shift: 'text-blue-400',
-    driver: 'text-green-400',
-    vehicle: 'text-orange-400',
+    shift: 'text-blue-800',
+    driver: 'text-green-800',
+    vehicle: 'text-primary',
   };
 
   return (
-    <div ref={wrapperRef} className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+    <div ref={wrapperRef} className="portalSearch">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
       <Input
         type="search"
+        aria-label="Search shifts, drivers and vehicles"
+        onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => query.trim().length >= 2 && setOpen(true)}
         placeholder="Search shifts, drivers, vehicles…"
-        className="w-64 pl-10 pr-8 bg-[#0F0F0F] border-gray-700 text-white placeholder:text-gray-500"
+        className="w-full pl-10 pr-8 bg-background border-border text-foreground placeholder:text-muted-foreground"
       />
       {query && (
         <button
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          aria-label="Clear search"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           onClick={() => { setQuery(''); setResults([]); setOpen(false); }}
         >
           <X className="w-3.5 h-3.5" />
@@ -165,28 +168,28 @@ export function GlobalSearch() {
       )}
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-80 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+        <div className="portalSearchResults">
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-400">
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
               <Loader className="w-4 h-4 animate-spin" />
               Searching…
             </div>
           ) : results.length === 0 ? (
-            <p className="py-4 text-center text-sm text-gray-500">No results</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">No results</p>
           ) : (
             <ul>
               {results.map((r) => (
                 <li key={`${r.kind}-${r.id}`}>
                   <button
-                    className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#272727] transition-colors"
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted transition-colors"
                     onClick={() => go(r)}
                   >
                     <span className={`mt-0.5 text-xs font-semibold uppercase tracking-wide w-14 shrink-0 ${kindColors[r.kind]}`}>
                       {kindLabel[r.kind]}
                     </span>
                     <span>
-                      <p className="text-sm text-white">{r.label}</p>
-                      {r.sublabel && <p className="text-xs text-gray-400 mt-0.5">{r.sublabel}</p>}
+                      <p className="text-sm text-foreground">{r.label}</p>
+                      {r.sublabel && <p className="text-xs text-muted-foreground mt-0.5">{r.sublabel}</p>}
                     </span>
                   </button>
                 </li>

@@ -591,59 +591,59 @@ export function ShiftsPage() {
   const latestLocationItems = locationItems.slice(-5).reverse();
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Shifts</h1>
-          <p className="text-gray-400">Track driver shifts and checklists. All times shown in {PERTH_TIME_LABEL}.</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Shifts</h1>
+          <p className="text-muted-foreground">Track driver shifts and checklists. All times shown in {PERTH_TIME_LABEL}.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Active Shifts</p>
-            <p className="text-3xl font-bold text-green-400">{loading ? '-' : activeCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Active Shifts</p>
+            <p className="text-3xl font-bold text-green-700">{loading ? '-' : activeCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Today's Shifts</p>
-            <p className="text-3xl font-bold text-white">{loading ? '-' : todayCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Today's Shifts</p>
+            <p className="text-3xl font-bold text-foreground">{loading ? '-' : todayCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Total Shifts</p>
-            <p className="text-3xl font-bold text-blue-400">{loading ? '-' : shifts.length}</p>
+            <p className="text-sm text-muted-foreground mb-1">Total Shifts</p>
+            <p className="text-3xl font-bold text-blue-700">{loading ? '-' : shifts.length}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle className="text-white">All Shifts</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-foreground">All Shifts</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   View shift history and current shifts
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search shifts..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                  className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -656,7 +656,7 @@ export function ShiftsPage() {
                   className={
                     filterStatus === status
                       ? 'bg-[#BE1C2D] hover:bg-[#A81828] text-white'
-                      : 'border-[#C4C0B7] text-gray-400 hover:text-white'
+                      : 'border-input text-muted-foreground hover:text-foreground'
                   }
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -674,20 +674,20 @@ export function ShiftsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Start Time</TableHead>
-                    <TableHead className="text-gray-400">End Time</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400">Checklist</TableHead>
-                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Start Time</TableHead>
+                    <TableHead className="text-muted-foreground">End Time</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Checklist</TableHead>
+                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredShifts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No shifts found
                       </TableCell>
                     </TableRow>
@@ -696,30 +696,30 @@ export function ShiftsPage() {
                       const checklistEntries = normalizeChecklist(shift.checklist);
 
                       return (
-                        <TableRow key={shift.id} className="border-[#D7D3CA] align-top">
-                          <TableCell className="font-medium text-white">
+                        <TableRow key={shift.id} className="border-border align-top">
+                          <TableCell className="font-medium text-foreground">
                             {getDriverDisplay(shift)}
                           </TableCell>
-                          <TableCell className="text-gray-300">
+                          <TableCell className="text-foreground">
                             {getVehicleDisplay(shift)}
                           </TableCell>
-                          <TableCell className="text-gray-300">
+                          <TableCell className="text-foreground">
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-gray-500" />
+                              <Clock className="w-4 h-4 text-muted-foreground" />
                               {formatPerthDateTime(shift.started_at)}
                             </div>
                           </TableCell>
-                          <TableCell className="text-gray-300">
+                          <TableCell className="text-foreground">
                             {shift.ended_at
                               ? formatPerthDateTime(shift.ended_at)
-                              : <span className="text-yellow-400">In progress</span>}
+                              : <span className="text-yellow-800">In progress</span>}
                           </TableCell>
                           <TableCell>
                             <Badge
                               className={
                                 shift.status === 'active'
-                                  ? 'bg-green-950 text-green-400 border-green-900 capitalize'
-                                  : 'bg-gray-800 text-gray-400 border-[#C4C0B7] capitalize'
+                                  ? 'bg-green-50 text-green-700 border-green-200 capitalize'
+                                  : 'bg-muted text-muted-foreground border-input capitalize'
                               }
                             >
                               {shift.status}
@@ -727,22 +727,22 @@ export function ShiftsPage() {
                           </TableCell>
                           <TableCell className="min-w-[280px]">
                             {checklistEntries.length === 0 ? (
-                              <span className="text-sm text-gray-500">No checklist saved</span>
+                              <span className="text-sm text-muted-foreground">No checklist saved</span>
                             ) : (
                               <div className="space-y-1">
                                 {checklistEntries.map((item) => (
                                   <div
                                     key={`${shift.id}-${item.key}`}
-                                    className="flex items-center justify-between gap-3 rounded bg-[#F5F2EB] px-2 py-1 text-xs"
+                                    className="flex items-center justify-between gap-3 rounded bg-background px-2 py-1 text-xs"
                                   >
-                                    <span className="text-gray-400">{item.label}</span>
+                                    <span className="text-muted-foreground">{item.label}</span>
                                     <span
                                       className={
                                         item.status === 'fail'
-                                          ? 'font-medium text-red-400'
+                                          ? 'font-medium text-red-700'
                                           : item.status === 'pass'
-                                            ? 'font-medium text-green-400'
-                                            : 'text-yellow-400'
+                                            ? 'font-medium text-green-700'
+                                            : 'text-yellow-800'
                                       }
                                     >
                                       {item.statusLabel}
@@ -757,7 +757,7 @@ export function ShiftsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-gray-400 hover:text-blue-400 h-8 px-2 text-xs"
+                                className="text-muted-foreground hover:text-blue-700 h-8 px-2 text-xs"
                                 onClick={() => {
                                   navigate(`/shifts/${shift.id}`);
                                 }}
@@ -767,7 +767,7 @@ export function ShiftsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-gray-400 hover:text-red-400 h-8 px-2 text-xs"
+                                className="text-muted-foreground hover:text-red-700 h-8 px-2 text-xs"
                                 disabled={deletingShiftId === shift.id}
                                 onClick={() => setDeleteShiftTarget(shift)}
                               >
@@ -777,7 +777,7 @@ export function ShiftsPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-gray-400 hover:text-red-400 h-8 px-2 text-xs"
+                                  className="text-muted-foreground hover:text-red-700 h-8 px-2 text-xs"
                                   onClick={() => {
                                     setSelectedShift(shift);
                                     setEndShiftDialog(true);
@@ -800,10 +800,10 @@ export function ShiftsPage() {
       </Card>
 
       <AlertDialog open={endShiftDialog} onOpenChange={handleEndShiftDialogChange}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">End Shift</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">End Shift</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Are you sure you want to end the shift for {selectedShift ? getDriverDisplay(selectedShift) : 'this driver'}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -812,16 +812,16 @@ export function ShiftsPage() {
               value={endShiftReason}
               onChange={(e) => setEndShiftReason(e.target.value)}
               placeholder="Reason (optional)"
-              className="bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground"
             />
           </div>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleEndShift}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-700 text-white hover:bg-red-800"
             >
               End Shift
             </AlertDialogAction>
@@ -830,20 +830,20 @@ export function ShiftsPage() {
       </AlertDialog>
 
       <AlertDialog open={Boolean(deleteShiftTarget)} onOpenChange={(open) => !open && setDeleteShiftTarget(null)}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Shift</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">Delete Shift</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               This deletes the shift and all related events. Continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700" disabled={Boolean(deletingShiftId)}>
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted" disabled={Boolean(deletingShiftId)}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteShift}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-700 text-white hover:bg-red-800"
               disabled={Boolean(deletingShiftId)}
             >
               {deletingShiftId ? 'Deleting...' : 'Delete Shift'}
@@ -855,17 +855,17 @@ export function ShiftsPage() {
 <Dialog open={detailsOpen} onOpenChange={handleDetailsOpenChange}>
   <DialogContent
     style={{ maxWidth: "1200px" }}
-    className="bg-[#FFFEFA] border-[#D7D3CA] text-[#17191B] max-h-[90vh] overflow-y-auto"
+    className="bg-card border-border text-[#17191B] max-h-[90vh] overflow-y-auto"
   >
     <DialogHeader>
       <DialogTitle className="text-lg font-semibold">Shift Details</DialogTitle>
-      <DialogDescription className="text-gray-400">
+      <DialogDescription className="text-muted-foreground">
         Full timeline and event breakdown for the selected shift
       </DialogDescription>
     </DialogHeader>
 
     {!detailShift ? (
-      <div className="text-sm text-gray-500">No shift selected.</div>
+      <div className="text-sm text-muted-foreground">No shift selected.</div>
     ) : (
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
@@ -873,9 +873,9 @@ export function ShiftsPage() {
         <div className="xl:col-span-2 space-y-4">
 
           {/* OVERVIEW */}
-          <Card className="bg-[#F5F2EB] border-[#D7D3CA]">
+          <Card className="bg-background border-border">
             <CardHeader>
-              <CardTitle className="text-white">Overview</CardTitle>
+              <CardTitle className="text-foreground">Overview</CardTitle>
             </CardHeader>
 
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -887,20 +887,20 @@ export function ShiftsPage() {
               ].map(([label, value]) => (
                 <div
                   key={label}
-                  className="rounded-lg bg-[#121212] border border-[#D7D3CA] px-3 py-2"
+                  className="rounded-lg bg-muted border border-border px-3 py-2"
                 >
-                  <p className="text-xs text-gray-500">{label}</p>
-                  <p className="text-sm text-gray-100 truncate">{value}</p>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-sm text-foreground truncate">{value}</p>
                 </div>
               ))}
 
-              <div className="rounded-lg bg-[#121212] border border-[#D7D3CA] px-3 py-2">
-                <p className="text-xs text-gray-500">Status</p>
+              <div className="rounded-lg bg-muted border border-border px-3 py-2">
+                <p className="text-xs text-muted-foreground">Status</p>
                 <Badge
                   className={
                     detailShift.status === "active"
-                      ? "bg-green-950 text-green-400 border-green-900 mt-1 capitalize"
-                      : "bg-gray-800 text-gray-400 border-[#C4C0B7] mt-1 capitalize"
+                      ? "bg-green-50 text-green-700 border-green-200 mt-1 capitalize"
+                      : "bg-muted text-muted-foreground border-input mt-1 capitalize"
                   }
                 >
                   {detailShift.status}
@@ -910,10 +910,10 @@ export function ShiftsPage() {
           </Card>
 
           {/* GPS */}
-          <Card className="bg-[#F5F2EB] border-[#D7D3CA]">
+          <Card className="bg-background border-border">
             <CardHeader>
-              <CardTitle className="text-white">Live GPS Tracking</CardTitle>
-              <CardDescription className="text-gray-500">
+              <CardTitle className="text-foreground">Live GPS Tracking</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Latest location updates from shift events
               </CardDescription>
             </CardHeader>
@@ -924,22 +924,22 @@ export function ShiftsPage() {
                   <Loader className="w-5 h-5 text-[#BE1C2D] animate-spin" />
                 </div>
               ) : latestLocationItems.length === 0 ? (
-                <p className="text-sm text-gray-500">No GPS data available</p>
+                <p className="text-sm text-muted-foreground">No GPS data available</p>
               ) : (
                 <div className="space-y-2">
                   {latestLocationItems.map((item) => (
                     <div
                       key={`loc-${item.id}`}
-                      className="rounded-lg bg-[#121212] border border-[#D7D3CA] px-3 py-2 text-xs"
+                      className="rounded-lg bg-muted border border-border px-3 py-2 text-xs"
                     >
-                      <div className="flex justify-between text-gray-400">
+                      <div className="flex justify-between text-muted-foreground">
                         <span>{item.latitude}</span>
                         <span>{item.longitude}</span>
                       </div>
                       {isLikelyDefaultCoordinate(item.latitude, item.longitude) && (
-                        <p className="mt-1 text-[11px] text-amber-300">Invalid/default coordinate flagged</p>
+                        <p className="mt-1 text-[11px] text-amber-800">Invalid/default coordinate flagged</p>
                       )}
-                      <p className="text-[11px] text-gray-500 mt-1">
+                      <p className="text-[11px] text-muted-foreground mt-1">
                         {formatTimestamp(item.created_at)}
                       </p>
                     </div>
@@ -952,68 +952,68 @@ export function ShiftsPage() {
           {/* CHECKLIST + BREAKS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-            <Card className="bg-[#F5F2EB] border-[#D7D3CA]">
+            <Card className="bg-background border-border">
               <CardHeader>
-                <CardTitle className="text-white">Checklist</CardTitle>
+                <CardTitle className="text-foreground">Checklist</CardTitle>
               </CardHeader>
 
               <CardContent className="space-y-3 text-sm">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-2 py-2 text-foreground">
                     Submitted At: {checklistSummary.submittedAt ? formatTimestamp(checklistSummary.submittedAt) : 'Pending'}
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-2 py-2 text-foreground">
                     Answers: {checklistSummary.answerCount > 0 ? checklistSummary.answerCount : 'Pending'}
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-2 py-2 text-foreground">
                     Has Failures:{' '}
                     <span
                       className={
                         checklistSummary.hasFailures == null
-                          ? 'text-yellow-400'
+                          ? 'text-yellow-800'
                           : checklistSummary.hasFailures
-                            ? 'text-red-400'
-                            : 'text-green-400'
+                            ? 'text-red-700'
+                            : 'text-green-700'
                       }
                     >
                       {checklistSummary.hasFailures == null ? 'Pending' : checklistSummary.hasFailures ? 'Fail' : 'Pass'}
                     </span>
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-2 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-2 py-2 text-foreground">
                     Total Answers: {checklistSummary.total}
                   </div>
                 </div>
 
                 <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
                   {checklistItems.length === 0 ? (
-                    <div className="rounded-lg border border-[#D7D3CA] bg-[#121212] px-3 py-2 text-xs text-gray-500">
+                    <div className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
                       No checklist submission event found
                     </div>
                   ) : (
                     checklistItems.map((item) => (
                       <div
                         key={`detail-${detailShift.id}-${item.key}`}
-                        className="rounded-lg border border-[#D7D3CA] bg-[#121212] px-3 py-2 text-xs"
+                        className="rounded-lg border border-border bg-muted px-3 py-2 text-xs"
                       >
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-300">{item.label}</span>
+                          <span className="text-foreground">{item.label}</span>
                           <span
                             className={
                               item.status === "fail"
-                                ? "text-red-400"
+                                ? "text-red-700"
                                 : item.status === "pass"
-                                ? "text-green-400"
-                                : "text-yellow-400"
+                                ? "text-green-700"
+                                : "text-yellow-800"
                             }
                           >
                             {item.statusLabel}
                           </span>
                         </div>
                         {item.valueLabel && (
-                          <p className="mt-1 text-[11px] text-gray-400">{item.valueLabel}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{item.valueLabel}</p>
                         )}
                         {item.notes && (
-                          <p className="mt-1 text-[11px] text-gray-500">{item.notes}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{item.notes}</p>
                         )}
                       </div>
                     ))
@@ -1022,38 +1022,38 @@ export function ShiftsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#F5F2EB] border-[#D7D3CA]">
+            <Card className="bg-background border-border">
               <CardHeader>
-                <CardTitle className="text-white">Breaks</CardTitle>
+                <CardTitle className="text-foreground">Breaks</CardTitle>
               </CardHeader>
 
               <CardContent className="space-y-3 text-sm">
                 <div className="space-y-2 text-xs">
-                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-3 py-2 text-foreground">
                     Raw break taken: {formatDurationSeconds(breakSummary.rawBreakSeconds) ?? '—'}
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-3 py-2 text-foreground">
                     Allowed break time: {formatDurationSeconds(breakSummary.allowanceSeconds) ?? '30m 0s'}
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-3 py-2 text-foreground">
                     Counted for payroll/work time: {formatDurationSeconds(breakSummary.countedBreakSeconds) ?? '—'}
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-3 py-2 text-gray-300">
+                  <div className="bg-muted rounded-lg px-3 py-2 text-foreground">
                     Working time (minus max 30m break): {formatDurationSeconds(workingSeconds ?? -1) ?? '—'}
                   </div>
-                  <div className="bg-[#121212] rounded-lg px-3 py-2">
-                    <span className="text-gray-400">Status:</span>{" "}
-                    <span className={breakSummary.status === 'exceeded' ? 'text-red-400' : 'text-green-400'}>
+                  <div className="bg-muted rounded-lg px-3 py-2">
+                    <span className="text-muted-foreground">Status:</span>{" "}
+                    <span className={breakSummary.status === 'exceeded' ? 'text-red-700' : 'text-green-700'}>
                       {breakSummary.status === 'exceeded' ? 'Exceeded allowance' : 'Within allowance'}
                     </span>
                   </div>
                   {breakSummary.blockMessage && (
-                    <div className="bg-amber-950/40 border border-amber-800 rounded-lg px-3 py-2 text-amber-300">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
                       {breakSummary.blockMessage}
                     </div>
                   )}
                   {breakSummary.shouldAutoEndCurrentBreak && (
-                    <div className="bg-red-950/40 border border-red-800 rounded-lg px-3 py-2 text-red-300">
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700">
                       Break allowance reached while on break. Current break should be auto-ended.
                     </div>
                   )}
@@ -1065,10 +1065,10 @@ export function ShiftsPage() {
 
         {/* RIGHT COLUMN - TIMELINE */}
         <div className="xl:col-span-1">
-          <Card className="bg-[#F5F2EB] border-[#D7D3CA] h-full">
+          <Card className="bg-background border-border h-full">
             <CardHeader>
-              <CardTitle className="text-white">Timeline</CardTitle>
-              <CardDescription className="text-gray-500">
+              <CardTitle className="text-foreground">Timeline</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Chronological event history
               </CardDescription>
             </CardHeader>
@@ -1079,23 +1079,23 @@ export function ShiftsPage() {
                   <Loader className="w-5 h-5 text-[#BE1C2D] animate-spin" />
                 </div>
               ) : timelineItems.length === 0 ? (
-                <p className="text-sm text-gray-500">No events found</p>
+                <p className="text-sm text-muted-foreground">No events found</p>
               ) : (
                 <div className="space-y-2">
                   {timelineItems.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-lg border border-[#D7D3CA] bg-[#121212] px-3 py-2"
+                      className="rounded-lg border border-border bg-muted px-3 py-2"
                     >
                       <div className="flex justify-between">
-                        <p className="text-sm text-gray-200">{item.label}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm text-foreground">{item.label}</p>
+                        <p className="text-xs text-muted-foreground">
                           {formatTimestamp(item.timestamp)}
                         </p>
                       </div>
 
                       {item.details && (
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {item.details}
                         </p>
                       )}

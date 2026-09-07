@@ -56,9 +56,9 @@ const normalizeStatus = (status: string | null | undefined): MaintenanceStatus =
 };
 
 const statusBadgeClass = (status: MaintenanceStatus) => {
-  if (status === 'done') return 'bg-green-950 text-green-400 border-green-900';
-  if (status === 'passed') return 'bg-red-950 text-red-400 border-red-900';
-  return 'bg-yellow-950 text-yellow-400 border-yellow-900';
+  if (status === 'done') return 'bg-green-50 text-green-700 border-green-200';
+  if (status === 'passed') return 'bg-red-50 text-red-700 border-red-200';
+  return 'bg-yellow-50 text-yellow-800 border-yellow-200';
 };
 
 const toDateInputValue = (value: string | null | undefined) => {
@@ -305,17 +305,17 @@ export function MaintenancePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Maintenance</h1>
-          <p className="text-gray-400">Track maintenance tasks ({PERTH_TIME_LABEL})</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Maintenance</h1>
+          <p className="text-muted-foreground">Track maintenance tasks ({PERTH_TIME_LABEL})</p>
         </div>
         <Button
           onClick={openCreateDialog}
@@ -327,54 +327,54 @@ export function MaintenancePage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-yellow-950 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-yellow-400" />
+              <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-yellow-800" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Due</p>
-                <p className="text-3xl font-bold text-yellow-400">{loading ? '-' : dueCount}</p>
+                <p className="text-sm text-muted-foreground mb-1">Due</p>
+                <p className="text-3xl font-bold text-yellow-800">{loading ? '-' : dueCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-red-950 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
+              <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Passed</p>
-                <p className="text-3xl font-bold text-red-400">{loading ? '-' : passedCount}</p>
+                <p className="text-sm text-muted-foreground mb-1">Passed</p>
+                <p className="text-3xl font-bold text-red-700">{loading ? '-' : passedCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-950 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-400" />
+              <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Done</p>
-                <p className="text-3xl font-bold text-green-400">{loading ? '-' : doneCount}</p>
+                <p className="text-sm text-muted-foreground mb-1">Done</p>
+                <p className="text-3xl font-bold text-green-700">{loading ? '-' : doneCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-950 rounded-lg flex items-center justify-center">
-                <Wrench className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                <Wrench className="w-6 h-6 text-blue-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">Total</p>
-                <p className="text-3xl font-bold text-blue-400">{loading ? '-' : maintenanceItems.length}</p>
+                <p className="text-sm text-muted-foreground mb-1">Total</p>
+                <p className="text-3xl font-bold text-blue-700">{loading ? '-' : maintenanceItems.length}</p>
               </div>
             </div>
           </CardContent>
@@ -382,10 +382,10 @@ export function MaintenancePage() {
       </div>
 
       {serviceAlerts.length > 0 && (
-        <Card className="bg-[#FFFEFA] border-yellow-900">
+        <Card className="bg-card border-yellow-200">
           <CardHeader>
-            <CardTitle className="text-yellow-300">Automatic Service Alerts</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardTitle className="text-yellow-800">Automatic Service Alerts</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Service due soon alerts generated automatically from vehicle odometer data.
             </CardDescription>
           </CardHeader>
@@ -393,13 +393,13 @@ export function MaintenancePage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Vehicle rego</TableHead>
-                    <TableHead className="text-gray-400">Reason</TableHead>
-                    <TableHead className="text-gray-400">Current km</TableHead>
-                    <TableHead className="text-gray-400">Next service km</TableHead>
-                    <TableHead className="text-gray-400">Due / Overdue</TableHead>
-                    <TableHead className="text-right text-gray-400">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Vehicle rego</TableHead>
+                    <TableHead className="text-muted-foreground">Reason</TableHead>
+                    <TableHead className="text-muted-foreground">Current km</TableHead>
+                    <TableHead className="text-muted-foreground">Next service km</TableHead>
+                    <TableHead className="text-muted-foreground">Due / Overdue</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -420,18 +420,18 @@ export function MaintenancePage() {
                           : `Due in ${Math.round(alert.km_remaining).toLocaleString()} km`;
 
                     return (
-                      <TableRow key={itemId} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-200">{alert.vehicle_rego ?? alert.vehicle_id ?? 'Unknown'}</TableCell>
-                        <TableCell className="text-gray-300 max-w-[22rem]">
+                      <TableRow key={itemId} className="border-border">
+                        <TableCell className="text-foreground">{alert.vehicle_rego ?? alert.vehicle_id ?? 'Unknown'}</TableCell>
+                        <TableCell className="text-foreground max-w-[22rem]">
                           <p className="line-clamp-2">{reason}</p>
                         </TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-foreground">
                           {alert.current_km != null ? `${Math.round(alert.current_km).toLocaleString()} km` : '—'}
                         </TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-foreground">
                           {alert.next_service_km != null ? `${Math.round(alert.next_service_km).toLocaleString()} km` : '—'}
                         </TableCell>
-                        <TableCell className={alert.km_remaining != null && alert.km_remaining <= 0 ? 'text-red-400' : 'text-gray-300'}>
+                        <TableCell className={alert.km_remaining != null && alert.km_remaining <= 0 ? 'text-red-700' : 'text-foreground'}>
                           {dueStatus}
                         </TableCell>
                         <TableCell>
@@ -446,7 +446,7 @@ export function MaintenancePage() {
                             </Button>
                             <Button
                               size="sm"
-                              className="bg-green-600 text-white hover:bg-green-500"
+                              className="bg-green-700 text-white hover:bg-green-800"
                               disabled={busy}
                               onClick={() => handleCompleteAlert(itemId)}
                             >
@@ -464,23 +464,23 @@ export function MaintenancePage() {
         </Card>
       )}
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-white">Maintenance Schedule</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className="text-foreground">Maintenance Schedule</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Vehicle, optional driver, service type, date, status, and actions
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search service, vehicle, driver..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -494,19 +494,19 @@ export function MaintenancePage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Driver (optional)</TableHead>
-                    <TableHead className="text-gray-400">Type of service</TableHead>
-                    <TableHead className="text-gray-400">Date</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Driver (optional)</TableHead>
+                    <TableHead className="text-muted-foreground">Type of service</TableHead>
+                    <TableHead className="text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         No maintenance items found
                       </TableCell>
                     </TableRow>
@@ -518,15 +518,15 @@ export function MaintenancePage() {
                       const rowDate = item.scheduled_date ?? item.service_date;
 
                       return (
-                        <TableRow key={item.id} className="border-[#D7D3CA]">
-                          <TableCell className="text-gray-200 font-medium">
+                        <TableRow key={item.id} className="border-border">
+                          <TableCell className="text-foreground font-medium">
                             {vehicle ? getVehicleLabel(vehicle) : item.vehicle_id}
                           </TableCell>
-                          <TableCell className="text-gray-300">
+                          <TableCell className="text-foreground">
                             {driver ? getDriverLabel(driver) : '—'}
                           </TableCell>
-                          <TableCell className="text-gray-300">{item.service_type}</TableCell>
-                          <TableCell className="text-gray-300">
+                          <TableCell className="text-foreground">{item.service_type}</TableCell>
+                          <TableCell className="text-foreground">
                             {rowDate ? formatPerthDate(rowDate) : 'Not scheduled'}
                           </TableCell>
                           <TableCell>
@@ -539,7 +539,7 @@ export function MaintenancePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-gray-300 hover:text-white"
+                                className="text-foreground hover:text-foreground"
                                 onClick={() => openEditDialog(item)}
                               >
                                 <Pencil className="w-4 h-4 mr-1" />
@@ -548,7 +548,7 @@ export function MaintenancePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-green-400 hover:text-green-300"
+                                className="text-green-700 hover:text-green-700"
                                 onClick={() => handleToggleCompleted(item)}
                               >
                                 {normalized === 'done' ? 'Mark uncompleted' : 'Mark completed'}
@@ -556,7 +556,7 @@ export function MaintenancePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-red-400 hover:text-red-300"
+                                className="text-red-700 hover:text-red-700"
                                 onClick={() => handleDeleteClick(item)}
                               >
                                 <Trash2 className="w-4 h-4 mr-1" />
@@ -576,22 +576,22 @@ export function MaintenancePage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">{editingItem ? 'Edit Maintenance' : 'Add Maintenance'}</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">{editingItem ? 'Edit Maintenance' : 'Add Maintenance'}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Set vehicle, optional driver, type of service, date, and status.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-300">Vehicle</Label>
+              <Label className="text-foreground">Vehicle</Label>
               <Select
                 value={formData.vehicleId}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, vehicleId: value }))}
               >
-                <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+                <SelectTrigger className="bg-background border-input text-foreground">
                   <SelectValue placeholder="Select vehicle" />
                 </SelectTrigger>
                 <SelectContent>
@@ -605,12 +605,12 @@ export function MaintenancePage() {
             </div>
 
             <div>
-              <Label className="text-gray-300">Driver (optional)</Label>
+              <Label className="text-foreground">Driver (optional)</Label>
               <Select
                 value={formData.driverId}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, driverId: value }))}
               >
-                <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+                <SelectTrigger className="bg-background border-input text-foreground">
                   <SelectValue placeholder="No driver" />
                 </SelectTrigger>
                 <SelectContent>
@@ -625,32 +625,32 @@ export function MaintenancePage() {
             </div>
 
             <div>
-              <Label className="text-gray-300">Type of service</Label>
+              <Label className="text-foreground">Type of service</Label>
               <Input
                 value={formData.serviceType}
                 onChange={(e) => setFormData((prev) => ({ ...prev, serviceType: e.target.value }))}
                 placeholder="e.g., Oil change"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
 
             <div>
-              <Label className="text-gray-300">Date</Label>
+              <Label className="text-foreground">Date</Label>
               <Input
                 type="date"
                 value={formData.scheduledDate}
                 onChange={(e) => setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))}
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
 
             <div>
-              <Label className="text-gray-300">Status</Label>
+              <Label className="text-foreground">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as MaintenanceStatus }))}
               >
-                <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+                <SelectTrigger className="bg-background border-input text-foreground">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -672,20 +672,20 @@ export function MaintenancePage() {
       </Dialog>
 
       <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Maintenance Item</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">Delete Maintenance Item</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Delete this maintenance record? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-700 text-white hover:bg-red-800"
             >
               Delete
             </AlertDialogAction>

@@ -1,24 +1,12 @@
-// Environment validation helper
-export function validateEnv(): void {
-  const requiredEnvVars = [
-    'VITE_SUPABASE_URL',
-    'VITE_SUPABASE_ANON_KEY',
-  ];
+// Explicit references let Vite include only the public configuration required
+// by this client. The bootstrap validates it before importing the application.
+const publicEnv = {
+  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
+};
 
-  const missing = requiredEnvVars.filter(
-    (envVar) => !import.meta.env[envVar as keyof ImportMeta['env']]
-  );
-
-  if (missing.length > 0) {
-    const message = `Missing required environment variables: ${missing.join(', ')}. 
-    Please set these in your .env.local file.`;
-    console.error(message);
-    throw new Error(message);
-  }
-}
-
-export function getEnv(key: keyof ImportMeta['env']): string {
-  const value = import.meta.env[key];
+export function getEnv(key: keyof typeof publicEnv): string {
+  const value = publicEnv[key]?.trim();
   if (!value) {
     throw new Error(`Environment variable ${String(key)} is not set`);
   }

@@ -3,10 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/app/components/ui/sheet';
 import { formatPerthDateTime } from '@/lib/dateTime';
 import { InboxProvider, useInbox } from '@/contexts/InboxContext';
 import { supabase } from '@/lib/supabase';
@@ -33,21 +33,20 @@ import {
   Loader,
   ClipboardCheck,
   Menu,
-  X,
 } from 'lucide-react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Drivers', href: '/drivers', icon: Users },
-  { name: 'Vehicles', href: '/vehicles', icon: Truck },
-  { name: 'Live Map', href: '/live-map', icon: MapPin },
-  { name: 'Odometer', href: '/odometer', icon: Camera },
-  { name: 'Fuel Logs', href: '/fuel-logs', icon: Droplets },
-  { name: 'Shifts', href: '/shifts', icon: Calendar },
-  { name: 'Checklist Approvals', href: '/checklist-approvals', icon: ClipboardCheck },
-  { name: 'Maintenance', href: '/maintenance', icon: Wrench },
-  { name: 'Logs', href: '/logs', icon: FileText },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dispatch board', href: '/', icon: LayoutDashboard, group: 'Operations' },
+  { name: 'Live map', href: '/live-map', icon: MapPin, group: 'Operations' },
+  { name: 'Drivers', href: '/drivers', icon: Users, group: 'Operations' },
+  { name: 'Shifts', href: '/shifts', icon: Calendar, group: 'Operations' },
+  { name: 'Vehicles', href: '/vehicles', icon: Truck, group: 'Fleet management' },
+  { name: 'Odometer', href: '/odometer', icon: Camera, group: 'Fleet management' },
+  { name: 'Fuel logs', href: '/fuel-logs', icon: Droplets, group: 'Fleet management' },
+  { name: 'Maintenance', href: '/maintenance', icon: Wrench, group: 'Fleet management' },
+  { name: 'Checklist approvals', href: '/checklist-approvals', icon: ClipboardCheck, group: 'Administration' },
+  { name: 'Activity logs', href: '/logs', icon: FileText, group: 'Administration' },
+  { name: 'Settings', href: '/settings', icon: Settings, group: 'Administration' },
 ];
 
 function InboxDialogButton() {
@@ -60,11 +59,12 @@ function InboxDialogButton() {
       <Button
         variant="outline"
         size="sm"
-        className="relative border-gray-700 bg-[#0F0F0F] text-gray-200 hover:bg-[#1C1C1C] hover:text-white"
+        className="portalInboxButton"
+        aria-label={unreadCount > 0 ? `Inbox, ${unreadCount} unread` : 'Inbox'}
         onClick={() => setOpen(true)}
       >
-        <Bell className="w-4 h-4 mr-2" />
-        Inbox
+        <Bell className="w-4 h-4" />
+        <span className="hidden sm:inline">Inbox</span>
         {unreadCount > 0 && (
           <span className="ml-2 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold text-white">
             {unreadCount}
@@ -73,13 +73,13 @@ function InboxDialogButton() {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl border-gray-800 bg-[#161616] text-gray-100">
+        <DialogContent className="max-w-4xl border-border bg-card text-foreground">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
               <Inbox className="w-5 h-5" />
               Notification Centre
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Service alerts and maintenance notifications.
             </DialogDescription>
           </DialogHeader>
@@ -88,7 +88,7 @@ function InboxDialogButton() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-gray-300 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
               onClick={refresh}
               disabled={loading}
             >
@@ -99,24 +99,24 @@ function InboxDialogButton() {
 
           <div className="max-h-[65vh] overflow-y-auto pr-1 space-y-3">
             {loading ? (
-              <div className="flex items-center justify-center py-8 text-gray-400">
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
                 <Loader className="w-5 h-5 animate-spin mr-2" />
                 Loading notifications...
               </div>
             ) : unreadCount === 0 ? (
-              <div className="rounded-lg border border-gray-800 bg-[#0F0F0F] p-4 text-sm text-gray-400">
+              <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
                 No unacknowledged notifications.
               </div>
             ) : (
               <>
                 {checklistPendingCount > 0 && (
-                  <Card className="border-gray-800 bg-[#0F0F0F]">
+                  <Card className="border-border bg-background">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-red-300">Failed checklist approvals pending</p>
+                        <p className="text-sm font-semibold text-red-800">Failed checklist approvals pending</p>
                         <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
                       </div>
-                      <p className="text-sm text-gray-300">
+                      <p className="text-sm text-muted-foreground">
                         {checklistPendingCount} pending checklist approval request(s) require admin action.
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -136,19 +136,19 @@ function InboxDialogButton() {
                 {notifications.map((notification) => {
                   const busy = busyId === notification.maintenance_item_id;
                   return (
-                    <Card key={notification.maintenance_item_id} className="border-gray-800 bg-[#0F0F0F]">
+                    <Card key={notification.maintenance_item_id} className="border-border bg-background">
                       <CardContent className="p-4 space-y-3">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-yellow-300">Service due soon</p>
+                          <p className="text-sm font-semibold text-amber-800">Service due soon</p>
                           <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                          <p className="text-gray-300">Vehicle rego: <span className="text-white">{notification.vehicle_rego ?? notification.vehicle_id ?? 'Unknown'}</span></p>
-                          <p className="text-gray-300">Current km: <span className="text-white">{notification.current_km != null ? `${Math.round(notification.current_km).toLocaleString()} km` : '—'}</span></p>
-                          <p className="text-gray-300">Target service km: <span className="text-white">{notification.target_service_km != null ? `${Math.round(notification.target_service_km).toLocaleString()} km` : '—'}</span></p>
-                          <p className="text-gray-300">KM remaining: <span className="text-white">{notification.km_remaining != null ? `${Math.round(notification.km_remaining).toLocaleString()} km` : '—'}</span></p>
-                          <p className="text-gray-300 sm:col-span-2">Created: <span className="text-white">{formatPerthDateTime(notification.created_at)}</span></p>
+                          <p className="text-muted-foreground">Vehicle rego: <span className="text-foreground">{notification.vehicle_rego ?? notification.vehicle_id ?? 'Unknown'}</span></p>
+                          <p className="text-muted-foreground">Current km: <span className="text-foreground">{notification.current_km != null ? `${Math.round(notification.current_km).toLocaleString()} km` : '—'}</span></p>
+                          <p className="text-muted-foreground">Target service km: <span className="text-foreground">{notification.target_service_km != null ? `${Math.round(notification.target_service_km).toLocaleString()} km` : '—'}</span></p>
+                          <p className="text-muted-foreground">KM remaining: <span className="text-foreground">{notification.km_remaining != null ? `${Math.round(notification.km_remaining).toLocaleString()} km` : '—'}</span></p>
+                          <p className="text-muted-foreground sm:col-span-2">Created: <span className="text-foreground">{formatPerthDateTime(notification.created_at)}</span></p>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -163,7 +163,7 @@ function InboxDialogButton() {
                           </Button>
                           <Button
                             size="sm"
-                            className="bg-green-600 text-white hover:bg-green-500"
+                            className="bg-green-700 text-white hover:bg-green-800"
                             disabled={busy}
                             onClick={() => complete(notification.maintenance_item_id)}
                           >
@@ -173,7 +173,7 @@ function InboxDialogButton() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-gray-300 hover:text-white"
+                            className="text-muted-foreground hover:text-foreground"
                             onClick={() => { setOpen(false); navigate('/maintenance'); }}
                           >
                             <ExternalLink className="w-4 h-4 mr-1" />
@@ -198,7 +198,14 @@ export function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [onlineDrivers, setOnlineDrivers] = useState(0);
+  const [onlineDrivers, setOnlineDrivers] = useState<number | null>(null);
+
+  const currentPage = navigation.find(item => location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(`${item.href}/`))) || navigation[0];
+
+  useEffect(() => {
+    setSidebarOpen(false);
+    document.title = `${currentPage.name} | Transline Admin`;
+  }, [location.pathname, currentPage.name]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,6 +217,7 @@ export function DashboardLayout() {
         setOnlineDrivers(drivers.filter((d) => d.online_status === 'online').length);
       } catch (err) {
         console.error('Failed to fetch online driver count:', err);
+        if (!cancelled) setOnlineDrivers(null);
       }
     };
 
@@ -267,183 +275,87 @@ export function DashboardLayout() {
     navigate('/login', { replace: true });
   };
 
-  return (
-    <InboxProvider>
-    <div className="min-h-screen bg-[#F5F2EB] portalNumbers">
-      {/* Sidebar for desktop */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-[#161616] border-r border-gray-800">
-          {/* Logo */}
-          <div className="flex items-center h-16 px-4 border-b border-gray-800">
-            <img src={logo} alt="Transline Logistics" className="w-[174px] h-auto" />
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item) => {
+  const sidebar = (
+    <>
+      <Link to="/" className="portalBrand" aria-label="Transline dispatch board">
+        <img src={logo} alt="Transline Logistics" />
+        <span>ADMIN / OPERATIONS</span>
+      </Link>
+      <nav className="portalNavigation" aria-label="Admin navigation">
+        {['Operations', 'Fleet management', 'Administration'].map(group => (
+          <div className="portalNavGroup" key={group}>
+            <p>{group}</p>
+            {navigation.filter(item => item.group === group).map(item => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-
+              const active = currentPage.href === item.href;
               return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-l-2 ${
-                    isActive
-                      ? 'bg-[#BE1C2D] border-[#E2485A] text-white'
-                      : 'border-transparent text-gray-300 hover:bg-[#0F0F0F] hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.name}
+                <Link key={item.href} to={item.href} aria-current={active ? 'page' : undefined}
+                  className={`portalNavLink ${active ? 'isActive' : ''}`}
+                  onClick={() => setSidebarOpen(false)}>
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{item.name}</span>
                 </Link>
               );
             })}
-          </nav>
-
-          {/* Logout button */}
-          <div className="p-4 border-t border-gray-800">
-            <Button
-              data-logout-trigger="true"
-              onClick={handleLogout}
-              variant="ghost"
-              className="w-full justify-start text-gray-300 hover:bg-[#0F0F0F] hover:text-white"
-            >
-              <LogOut className="w-5 h-5 mr-3" />
-              Logout
-            </Button>
           </div>
-        </div>
-      </aside>
-
-      {/* Mobile sidebar */}
-      {sidebarOpen && (
-        <div className="lg:hidden">
-          <div
-            className="fixed inset-0 z-40 bg-black/80"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              if (event.target === event.currentTarget) {
-                setSidebarOpen(false);
-              }
-            }}
-          />
-          <aside
-            className="fixed inset-y-0 left-0 z-50 w-64 bg-[#161616] border-r border-gray-800"
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
-                <div className="flex items-center">
-                  <img src={logo} alt="Transline Logistics" className="w-[166px] h-auto" />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarOpen(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-
-              <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
-
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-l-2 ${
-                        isActive
-                          ? 'bg-[#BE1C2D] border-[#E2485A] text-white'
-                          : 'border-transparent text-gray-300 hover:bg-[#0F0F0F] hover:text-white'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <div className="p-4 border-t border-gray-800">
-                <Button
-                  data-logout-trigger="true"
-                  onClick={handleLogout}
-                  variant="ghost"
-                  className="w-full justify-start text-gray-300 hover:bg-[#0F0F0F] hover:text-white"
-                >
-                  <LogOut className="w-5 h-5 mr-3" />
-                  Logout
-                </Button>
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Header */}
-        <header className="sticky top-0 z-30 bg-[#161616] border-b border-gray-800">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden text-gray-400 hover:text-white"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-
-              <div className="hidden sm:block">
-                <GlobalSearch />
-              </div>
-
-              <InboxDialogButton />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-green-950 text-green-400 border-green-900">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-                {onlineDrivers} Drivers Online
-              </Badge>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-gray-400 hover:text-white"
-              >
-                <RefreshCw className="w-5 h-5" />
-              </Button>
-
-              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-800">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-white">{user?.email || 'Admin'}</p>
-                  <p className="text-xs text-gray-400">Administrator</p>
-                </div>
-                <div className="w-10 h-10 bg-[#BE1C2D] rounded-full flex items-center justify-center text-white font-medium">
-                  {user?.email?.[0].toUpperCase() || 'A'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Page content */}
-        <main className="portalWorkspace p-4 sm:p-6 lg:p-8">
-          <Outlet />
-        </main>
+        ))}
+      </nav>
+      <div className="portalSidebarFoot">
+        <a href="/" className="portalWebsiteLink">Public website <ExternalLink size={14} /></a>
+        <Button data-logout-trigger="true" onClick={handleLogout} variant="ghost" className="portalLogout">
+          <LogOut size={17} /> Sign out
+        </Button>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <InboxProvider>
+      <div className="portalShell portalNumbers">
+        <a href="#portal-content" className="portalSkipLink">Skip to content</a>
+        <aside className="portalSidebar">{sidebar}</aside>
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent side="left" className="portalMobileSidebar" onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            document.getElementById('portal-menu-button')?.focus();
+          }}>
+            <SheetTitle className="sr-only">Transline admin navigation</SheetTitle>
+            <SheetDescription className="sr-only">Manage drivers, vehicles and shifts.</SheetDescription>
+            {sidebar}
+          </SheetContent>
+        </Sheet>
+        <div className="portalMain">
+          <header className="portalTopbar">
+            <div className="flex min-w-0 items-center gap-3">
+              <Button id="portal-menu-button" variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation"
+                aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
+                <Menu size={21} />
+              </Button>
+              <div className="portalBreadcrumb">
+                <span>Workspace</span><span aria-hidden="true">/</span><strong>{currentPage.name}</strong>
+              </div>
+            </div>
+            <div className="portalTopbarActions">
+              <div className="hidden md:block"><GlobalSearch /></div>
+              <InboxDialogButton />
+              <Link to="/drivers" className="portalPresence" aria-label={onlineDrivers == null ? 'Driver presence unavailable. Open drivers.' : `${onlineDrivers} drivers online. Open drivers.`}>
+                <span className={onlineDrivers != null && onlineDrivers > 0 ? 'isOnline' : ''} />
+                {onlineDrivers == null ? '—' : onlineDrivers}<span className="hidden xl:inline"> online</span>
+              </Link>
+              <Link to="/settings" className="portalAccount" aria-label="Account settings" title={user?.email || 'Administrator'}>
+                {user?.email?.[0].toUpperCase() || 'A'}
+              </Link>
+            </div>
+          </header>
+          <div className="portalMobileSearch md:hidden"><GlobalSearch /></div>
+          <main id="portal-content" tabIndex={-1} className="portalWorkspace">
+            <Outlet />
+          </main>
+          <footer className="portalWorkspaceFooter">
+            <span>Transline Logistics</span><span>Admin workspace · Perth, WA</span>
+          </footer>
+        </div>
+      </div>
     </InboxProvider>
   );
 }

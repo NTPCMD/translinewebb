@@ -163,50 +163,50 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-gray-400">Manage admin settings and configuration</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
+        <p className="text-muted-foreground">Manage admin settings and configuration</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Admin Profile */}
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA] lg:col-span-2">
+        <Card className="bg-card border-border lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <User className="w-5 h-5" />
               Admin Profile
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-muted-foreground">
               Update your admin account information
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUpdatePassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">Email</Label>
+                <Label htmlFor="email" className="text-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="bg-[#F5F2EB] border-[#C4C0B7] text-gray-400"
+                  className="bg-background border-input text-muted-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role" className="text-white">Role</Label>
+                <Label htmlFor="role" className="text-foreground">Role</Label>
                 <Input
                   id="role"
                   value="Administrator"
                   disabled
-                  className="bg-[#F5F2EB] border-[#C4C0B7] text-gray-400"
+                  className="bg-background border-input text-muted-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="current-password" className="text-white">Current Password</Label>
+                <Label htmlFor="current-password" className="text-foreground">Current Password</Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -214,12 +214,12 @@ export function SettingsPage() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                  className="bg-background border-input text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="new-password" className="text-white">New Password</Label>
+                <Label htmlFor="new-password" className="text-foreground">New Password</Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -227,12 +227,12 @@ export function SettingsPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                  className="bg-background border-input text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-white">Confirm New Password</Label>
+                <Label htmlFor="confirm-password" className="text-foreground">Confirm New Password</Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -240,15 +240,15 @@ export function SettingsPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                  className="bg-background border-input text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               {passwordError && (
-                <p className="text-sm text-red-400">{passwordError}</p>
+                <p className="text-sm text-red-700">{passwordError}</p>
               )}
               {passwordSuccess && (
-                <p className="text-sm text-green-400">{passwordSuccess}</p>
+                <p className="text-sm text-green-700">{passwordSuccess}</p>
               )}
 
               <Button
@@ -265,24 +265,24 @@ export function SettingsPage() {
 
         {/* System Status */}
         <div className="space-y-6">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Database className="w-5 h-5" />
                 System Status
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-muted-foreground">
                 Connection and health status
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-white">Supabase</p>
-                  <p className="text-xs text-gray-500">Database connection</p>
+                  <p className="text-sm font-medium text-foreground">Supabase</p>
+                  <p className="text-xs text-muted-foreground">Database connection</p>
                 </div>
                 {supabaseStatus === 'checking' ? (
-                  <Badge className="bg-gray-800 text-gray-400 border-[#C4C0B7]">
+                  <Badge className="bg-muted text-muted-foreground border-input">
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                     Checking
                   </Badge>
@@ -290,8 +290,8 @@ export function SettingsPage() {
                   <Badge
                     className={
                       supabaseConnected
-                        ? 'bg-green-950 text-green-400 border-green-900'
-                        : 'bg-red-950 text-red-400 border-red-900'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-red-50 text-red-700 border-red-200'
                     }
                   >
                     {supabaseConnected ? (
@@ -311,10 +311,10 @@ export function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-white">API Server</p>
-                  <p className="text-xs text-gray-500">Backend services</p>
+                  <p className="text-sm font-medium text-foreground">API Server</p>
+                  <p className="text-xs text-muted-foreground">Backend services</p>
                 </div>
-                <Badge className="bg-green-950 text-green-400 border-green-900">
+                <Badge className="bg-green-50 text-green-700 border-green-200">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Operational
                 </Badge>
@@ -322,36 +322,36 @@ export function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-white">GPS Tracking</p>
-                  <p className="text-xs text-gray-500">Real-time location</p>
+                  <p className="text-sm font-medium text-foreground">GPS Tracking</p>
+                  <p className="text-xs text-muted-foreground">Real-time location</p>
                 </div>
-                <Badge className="bg-yellow-950 text-yellow-400 border-yellow-900">
+                <Badge className="bg-yellow-50 text-yellow-800 border-yellow-200">
                   Pending Setup
                 </Badge>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Shield className="w-5 h-5" />
                 Security
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-muted-foreground">
                 Security settings
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-white">Two-Factor Auth</p>
-                <Badge className="bg-gray-800 text-gray-400 border-[#C4C0B7]">
+                <p className="text-sm text-foreground">Two-Factor Auth</p>
+                <Badge className="bg-muted text-muted-foreground border-input">
                   Disabled
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-white">Session Timeout</p>
-                <Badge className="bg-blue-950 text-blue-400 border-blue-900">
+                <p className="text-sm text-foreground">Session Timeout</p>
+                <Badge className="bg-blue-50 text-blue-700 border-blue-200">
                   8 hours
                 </Badge>
               </div>
@@ -361,20 +361,20 @@ export function SettingsPage() {
       </div>
 
       {/* Notifications Settings */}
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <Bell className="w-5 h-5" />
             Notification Preferences
           </CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardDescription className="text-muted-foreground">
             Configure notification settings
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-white">Email Notifications</h3>
+              <h3 className="text-sm font-medium text-foreground">Email Notifications</h3>
               <div className="space-y-3">
                 {EMAIL_NOTIFICATIONS.map((item) => (
                   <label key={item} className="flex items-center gap-3 cursor-pointer">
@@ -382,16 +382,16 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={!!notificationPrefs[item]}
                       onChange={() => toggleNotification(item)}
-                      className="w-4 h-4 rounded border-[#C4C0B7] bg-[#F5F2EB] text-[#BE1C2D] focus:ring-[#BE1C2D]"
+                      className="w-4 h-4 rounded border-input bg-background text-[#BE1C2D] focus:ring-[#BE1C2D]"
                     />
-                    <span className="text-sm text-gray-300">{item}</span>
+                    <span className="text-sm text-foreground">{item}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-white">Push Notifications</h3>
+              <h3 className="text-sm font-medium text-foreground">Push Notifications</h3>
               <div className="space-y-3">
                 {PUSH_NOTIFICATIONS.map((item) => (
                   <label key={item} className="flex items-center gap-3 cursor-pointer">
@@ -399,16 +399,16 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={!!notificationPrefs[item]}
                       onChange={() => toggleNotification(item)}
-                      className="w-4 h-4 rounded border-[#C4C0B7] bg-[#F5F2EB] text-[#BE1C2D] focus:ring-[#BE1C2D]"
+                      className="w-4 h-4 rounded border-input bg-background text-[#BE1C2D] focus:ring-[#BE1C2D]"
                     />
-                    <span className="text-sm text-gray-300">{item}</span>
+                    <span className="text-sm text-foreground">{item}</span>
                   </label>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-[#D7D3CA] flex items-center gap-4">
+          <div className="mt-6 pt-6 border-t border-border flex items-center gap-4">
             <Button
               onClick={handleSavePreferences}
               className="bg-[#BE1C2D] hover:bg-[#A81828] text-white"
@@ -416,7 +416,7 @@ export function SettingsPage() {
               Save Preferences
             </Button>
             {prefsSaved && (
-              <span className="text-sm text-green-400">Preferences saved.</span>
+              <span className="text-sm text-green-700">Preferences saved.</span>
             )}
           </div>
         </CardContent>
@@ -424,15 +424,15 @@ export function SettingsPage() {
 
       {/* Database Setup Instructions */}
       {supabaseStatus === 'disconnected' && (
-        <Card className="bg-[#FFFEFA] border-yellow-900/50 border-2">
+        <Card className="bg-card border-yellow-200/50 border-2">
           <CardHeader>
-            <CardTitle className="text-yellow-400">Supabase Setup Required</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardTitle className="text-yellow-800">Supabase Setup Required</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Connect your Supabase database to enable full functionality
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm text-gray-300">
+            <div className="space-y-3 text-sm text-foreground">
               <p>To connect Supabase:</p>
               <ol className="list-decimal list-inside space-y-2 ml-4">
                 <li>Create a Supabase project at <a href="https://supabase.com" className="text-[#BE1C2D] underline" target="_blank" rel="noopener noreferrer">supabase.com</a></li>
@@ -440,9 +440,9 @@ export function SettingsPage() {
                 <li>Run the provided SQL migrations to create database tables</li>
                 <li>Restart the application</li>
               </ol>
-              <div className="mt-4 p-4 bg-[#F5F2EB] rounded-lg border border-[#D7D3CA]">
-                <p className="text-xs text-gray-400 mb-2">Environment Variables:</p>
-                <code className="text-xs text-green-400 block">
+              <div className="mt-4 p-4 bg-background rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground mb-2">Environment Variables:</p>
+                <code className="text-xs text-green-700 block">
                   VITE_SUPABASE_URL=your-project-url
                   <br />
                   VITE_SUPABASE_ANON_KEY=your-anon-key

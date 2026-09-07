@@ -438,67 +438,67 @@ export function FuelLogsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Fuel Logs</h1>
-        <p className="text-gray-400">Fuel purchases recorded from shift events</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Fuel Logs</h1>
+        <p className="text-muted-foreground">Fuel purchases recorded from shift events</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6 flex items-center gap-3">
             <Receipt className="w-8 h-8 text-[#BE1C2D]" />
             <div>
-              <p className="text-sm text-gray-400 mb-1">Weekly Fuel Logs</p>
-              <p className="text-3xl font-bold text-white">{weeklySummary.totalFuelLogs}</p>
+              <p className="text-sm text-muted-foreground mb-1">Weekly Fuel Logs</p>
+              <p className="text-3xl font-bold text-foreground">{weeklySummary.totalFuelLogs}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6 flex items-center gap-3">
-            <Droplets className="w-8 h-8 text-blue-400" />
+            <Droplets className="w-8 h-8 text-blue-700" />
             <div>
-              <p className="text-sm text-gray-400 mb-1">Weekly Litres</p>
-              <p className="text-3xl font-bold text-white">{weeklySummary.totalLitres.toFixed(2)} L</p>
+              <p className="text-sm text-muted-foreground mb-1">Weekly Litres</p>
+              <p className="text-3xl font-bold text-foreground">{weeklySummary.totalLitres.toFixed(2)} L</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6 flex items-center gap-3">
-            <Receipt className="w-8 h-8 text-green-400" />
+            <Receipt className="w-8 h-8 text-green-700" />
             <div>
-              <p className="text-sm text-gray-400 mb-1">Weekly Cost</p>
-              <p className="text-3xl font-bold text-white">{formatCurrency(weeklySummary.totalCost)}</p>
+              <p className="text-sm text-muted-foreground mb-1">Weekly Cost</p>
+              <p className="text-3xl font-bold text-foreground">{formatCurrency(weeklySummary.totalCost)}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6 flex items-center gap-3">
-            <Droplets className="w-8 h-8 text-yellow-400" />
+            <Droplets className="w-8 h-8 text-yellow-800" />
             <div>
-              <p className="text-sm text-gray-400 mb-1">Weekly Avg / Litre</p>
-              <p className="text-3xl font-bold text-white">{weeklySummary.averageCostPerLitre != null ? `$${weeklySummary.averageCostPerLitre.toFixed(2)}` : '—'}</p>
+              <p className="text-sm text-muted-foreground mb-1">Weekly Avg / Litre</p>
+              <p className="text-3xl font-bold text-foreground">{weeklySummary.averageCostPerLitre != null ? `$${weeklySummary.averageCostPerLitre.toFixed(2)}` : '—'}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">Filters</CardTitle>
-          <CardDescription className="text-gray-400">Refine fuel logs by driver, vehicle, and date range. All times shown in {PERTH_TIME_LABEL}.</CardDescription>
+          <CardTitle className="text-foreground">Filters</CardTitle>
+          <CardDescription className="text-muted-foreground">Refine fuel logs by driver, vehicle, and date range. All times shown in {PERTH_TIME_LABEL}.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
-            <Label className="text-gray-300">Driver</Label>
+            <Label className="text-foreground">Driver</Label>
             <Select value={driverFilter} onValueChange={setDriverFilter}>
-              <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+              <SelectTrigger className="bg-background border-input text-foreground">
                 <SelectValue placeholder="All drivers" />
               </SelectTrigger>
               <SelectContent>
@@ -517,9 +517,9 @@ export function FuelLogsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-300">Vehicle</Label>
+            <Label className="text-foreground">Vehicle</Label>
             <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-              <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+              <SelectTrigger className="bg-background border-input text-foreground">
                 <SelectValue placeholder="All vehicles" />
               </SelectTrigger>
               <SelectContent>
@@ -534,31 +534,31 @@ export function FuelLogsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-300">Start date</Label>
+            <Label className="text-foreground">Start date</Label>
             <Input
               type="date"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
-              className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+              className="bg-background border-input text-foreground"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-300">End date</Label>
+            <Label className="text-foreground">End date</Label>
             <Input
               type="date"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
-              className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+              className="bg-background border-input text-foreground"
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">Fuel Log Entries</CardTitle>
-          <CardDescription className="text-gray-400">Receipt-backed fuel events captured during shifts</CardDescription>
+          <CardTitle className="text-foreground">Fuel Log Entries</CardTitle>
+          <CardDescription className="text-muted-foreground">Receipt-backed fuel events captured during shifts</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -569,25 +569,25 @@ export function FuelLogsPage() {
             <>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Created</TableHead>
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Shift</TableHead>
-                    <TableHead className="text-gray-400">Litres</TableHead>
-                    <TableHead className="text-gray-400">Cost</TableHead>
-                    <TableHead className="text-gray-400">Odometer</TableHead>
-                    <TableHead className="text-gray-400">Station</TableHead>
-                    <TableHead className="text-gray-400">Location</TableHead>
-                    <TableHead className="text-gray-400">Receipt</TableHead>
-                    <TableHead className="text-gray-400">Seen</TableHead>
-                    <TableHead className="text-gray-400">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Created</TableHead>
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Shift</TableHead>
+                    <TableHead className="text-muted-foreground">Litres</TableHead>
+                    <TableHead className="text-muted-foreground">Cost</TableHead>
+                    <TableHead className="text-muted-foreground">Odometer</TableHead>
+                    <TableHead className="text-muted-foreground">Station</TableHead>
+                    <TableHead className="text-muted-foreground">Location</TableHead>
+                    <TableHead className="text-muted-foreground">Receipt</TableHead>
+                    <TableHead className="text-muted-foreground">Seen</TableHead>
+                    <TableHead className="text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {logs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center py-8 text-gray-500">No fuel logs found.</TableCell>
+                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No fuel logs found.</TableCell>
                     </TableRow>
                   ) : logs.map((row) => {
                     const metadata = parseFuelMetadata(row);
@@ -602,16 +602,16 @@ export function FuelLogsPage() {
                     const reviewing = reviewingIds.includes(row.id);
 
                     return (
-                      <TableRow key={row.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300">{formatDateTime(row.created_at)}</TableCell>
-                        <TableCell className="text-gray-300">{driverLabel}</TableCell>
-                        <TableCell className="text-gray-300">{vehicleLabel}</TableCell>
-                        <TableCell className="text-gray-300">
+                      <TableRow key={row.id} className="border-border">
+                        <TableCell className="text-foreground">{formatDateTime(row.created_at)}</TableCell>
+                        <TableCell className="text-foreground">{driverLabel}</TableCell>
+                        <TableCell className="text-foreground">{vehicleLabel}</TableCell>
+                        <TableCell className="text-foreground">
                           <div className="flex flex-col items-start gap-2">
-                            <span className="text-xs text-gray-500">{shiftId ? `${shiftId.slice(0, 8)}...` : '—'}</span>
+                            <span className="text-xs text-muted-foreground">{shiftId ? `${shiftId.slice(0, 8)}...` : '—'}</span>
                             <Button
                               size="sm"
-                              className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs"
+                              className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs"
                               disabled={!shiftId}
                               onClick={() => {
                                 if (!shiftId) return;
@@ -622,16 +622,16 @@ export function FuelLogsPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-300">{formatLitres(metadata.litres)}</TableCell>
-                        <TableCell className="text-gray-300">{formatCurrency(metadata.cost)}</TableCell>
-                        <TableCell className="text-gray-300">{formatOdometer(metadata.odometer_km)}</TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-foreground">{formatLitres(metadata.litres)}</TableCell>
+                        <TableCell className="text-foreground">{formatCurrency(metadata.cost)}</TableCell>
+                        <TableCell className="text-foreground">{formatOdometer(metadata.odometer_km)}</TableCell>
+                        <TableCell className="text-foreground">
                           <div className="max-w-[16rem]">
                             <p>{metadata.stationName ?? '—'}</p>
-                            {metadata.notes && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{metadata.notes}</p>}
+                            {metadata.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{metadata.notes}</p>}
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-300 text-xs">
+                        <TableCell className="text-foreground text-xs">
                           {hasCoords ? (
                             <div className="space-y-1">
                               <p>{metadata.lat?.toFixed(5)}, {metadata.lng?.toFixed(5)}</p>
@@ -647,12 +647,12 @@ export function FuelLogsPage() {
                             </div>
                           ) : '—'}
                         </TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-foreground">
                           {row.receipt_url ? (
                             <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
-                                className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs"
+                                className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs"
                                 onClick={() => setPreviewUrl(row.receipt_url ?? null)}
                               >
                                 <ImageIcon className="w-3.5 h-3.5 mr-1" />
@@ -670,14 +670,14 @@ export function FuelLogsPage() {
                             </div>
                           ) : '—'}
                         </TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-foreground">
                           <div className="flex flex-col items-start gap-2">
-                            <Badge className={reviewed ? 'bg-green-950 text-green-400 border-green-900' : 'bg-gray-900 text-gray-300 border-[#C4C0B7]'}>
+                            <Badge className={reviewed ? 'bg-green-50 text-green-700 border-green-200' : 'bg-muted text-foreground border-input'}>
                               {reviewed ? 'Seen' : 'Unseen'}
                             </Badge>
                             <Button
                               size="sm"
-                              className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs"
+                              className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs"
                               disabled={reviewing}
                               onClick={() => handleToggleReviewed(row)}
                             >
@@ -685,11 +685,11 @@ export function FuelLogsPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-foreground">
                           <Button
                             size="sm"
                             variant="destructive"
-                            className="bg-red-700 text-white hover:bg-red-600 text-xs"
+                            className="bg-red-700 text-white hover:bg-red-800 text-xs"
                             disabled={deletingFuelLogId === row.id}
                             onClick={() => setDeleteFuelLogId(row.id)}
                           >
@@ -703,12 +703,12 @@ export function FuelLogsPage() {
               </Table>
 
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
+                <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-gray-300"
+                    className="text-foreground"
                     disabled={page === 1}
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                   >
@@ -717,7 +717,7 @@ export function FuelLogsPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-gray-300"
+                    className="text-foreground"
                     disabled={page >= totalPages}
                     onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   >
@@ -731,31 +731,31 @@ export function FuelLogsPage() {
       </Card>
 
       <Dialog open={Boolean(previewUrl)} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA] max-w-3xl [&>button]:text-[#BE1C2D] [&>button:hover]:text-[#e55a25]">
+        <DialogContent className="bg-card border-border max-w-3xl [&>button]:text-[#BE1C2D] [&>button:hover]:text-[#A81828]">
           <DialogHeader>
-            <DialogTitle className="text-white">Fuel Receipt</DialogTitle>
+            <DialogTitle className="text-foreground">Fuel Receipt</DialogTitle>
           </DialogHeader>
           {previewUrl ? (
-            <img src={previewUrl} alt="Fuel receipt" className="w-full max-h-[75vh] object-contain rounded-lg border border-[#D7D3CA]" />
+            <img src={previewUrl} alt="Fuel receipt" className="w-full max-h-[75vh] object-contain rounded-lg border border-border" />
           ) : null}
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={Boolean(deleteFuelLogId)} onOpenChange={(open) => !open && setDeleteFuelLogId(null)}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Fuel Log</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">Delete Fuel Log</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               This will delete the selected fuel log event. Continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700" disabled={Boolean(deletingFuelLogId)}>
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted" disabled={Boolean(deletingFuelLogId)}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteFuelLog}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-700 text-white hover:bg-red-800"
               disabled={Boolean(deletingFuelLogId)}
             >
               {deletingFuelLogId ? 'Deleting...' : 'Delete Fuel Log'}

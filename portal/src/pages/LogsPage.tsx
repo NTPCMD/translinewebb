@@ -105,22 +105,22 @@ function getTypeIcon(type: LogType) {
 function getTypeBadge(type: LogType): string {
   switch (type) {
     case 'incident':
-      return 'bg-orange-950 text-orange-400 border-orange-900';
+      return 'bg-orange-50 text-orange-700 border-orange-200';
     case 'maintenance':
-      return 'bg-yellow-950 text-yellow-400 border-yellow-900';
+      return 'bg-yellow-50 text-yellow-800 border-yellow-200';
     case 'accident':
-      return 'bg-red-950 text-red-400 border-red-900';
+      return 'bg-red-50 text-red-700 border-red-200';
     default:
-      return 'bg-blue-950 text-blue-400 border-blue-900';
+      return 'bg-blue-50 text-blue-700 border-blue-200';
   }
 }
 
 function getSeverityBadge(severity: string): string {
   const normalized = severity.toLowerCase();
-  if (normalized === 'high') return 'bg-red-950 text-red-400 border-red-900';
-  if (normalized === 'medium') return 'bg-yellow-950 text-yellow-400 border-yellow-900';
-  if (normalized === 'low') return 'bg-blue-950 text-blue-400 border-blue-900';
-  return 'bg-gray-800 text-gray-300 border-[#C4C0B7]';
+  if (normalized === 'high') return 'bg-red-50 text-red-700 border-red-200';
+  if (normalized === 'medium') return 'bg-yellow-50 text-yellow-800 border-yellow-200';
+  if (normalized === 'low') return 'bg-blue-50 text-blue-700 border-blue-200';
+  return 'bg-muted text-foreground border-input';
 }
 
 function mapFromRecord(row: Record<string, unknown>): DriverLogRow {
@@ -278,61 +278,61 @@ export function LogsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Logs</h1>
-        <p className="text-gray-400">Driver logs and reports. All times shown in {PERTH_TIME_LABEL}.</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Logs</h1>
+        <p className="text-muted-foreground">Driver logs and reports. All times shown in {PERTH_TIME_LABEL}.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Total Logs</p>
-            <p className="text-3xl font-bold text-white">{summary.total}</p>
+            <p className="text-sm text-muted-foreground mb-1">Total Logs</p>
+            <p className="text-3xl font-bold text-foreground">{summary.total}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Incidents</p>
-            <p className="text-3xl font-bold text-orange-400">{summary.incidents}</p>
+            <p className="text-sm text-muted-foreground mb-1">Incidents</p>
+            <p className="text-3xl font-bold text-orange-700">{summary.incidents}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Maintenance</p>
-            <p className="text-3xl font-bold text-yellow-400">{summary.maintenance}</p>
+            <p className="text-sm text-muted-foreground mb-1">Maintenance</p>
+            <p className="text-3xl font-bold text-yellow-800">{summary.maintenance}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Accidents</p>
-            <p className="text-3xl font-bold text-red-400">{summary.accidents}</p>
+            <p className="text-sm text-muted-foreground mb-1">Accidents</p>
+            <p className="text-3xl font-bold text-red-700">{summary.accidents}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle className="text-white">All Logs</CardTitle>
-                <CardDescription className="text-gray-400">Search by description, driver, or vehicle in {PERTH_TIME_LABEL}</CardDescription>
+                <CardTitle className="text-foreground">All Logs</CardTitle>
+                <CardDescription className="text-muted-foreground">Search by description, driver, or vehicle in {PERTH_TIME_LABEL}</CardDescription>
               </div>
               <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search logs..."
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  className="pl-10 bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                  className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -345,7 +345,7 @@ export function LogsPage() {
                   className={
                     filterType === type
                       ? 'bg-[#BE1C2D] hover:bg-[#A81828] text-white'
-                      : 'border-[#C4C0B7] text-gray-400 hover:text-white'
+                      : 'border-input text-muted-foreground hover:text-foreground'
                   }
                 >
                   {type === 'all'
@@ -372,23 +372,23 @@ export function LogsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Type/category</TableHead>
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Description</TableHead>
-                    <TableHead className="text-gray-400">Date/time</TableHead>
-                    <TableHead className="text-gray-400">Severity</TableHead>
-                    <TableHead className="text-gray-400">Location / Maps</TableHead>
-                    <TableHead className="text-gray-400">Photo</TableHead>
-                    <TableHead className="text-gray-400">Shift</TableHead>
-                    <TableHead className="text-right text-gray-400">Delete</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Type/category</TableHead>
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Description</TableHead>
+                    <TableHead className="text-muted-foreground">Date/time</TableHead>
+                    <TableHead className="text-muted-foreground">Severity</TableHead>
+                    <TableHead className="text-muted-foreground">Location / Maps</TableHead>
+                    <TableHead className="text-muted-foreground">Photo</TableHead>
+                    <TableHead className="text-muted-foreground">Shift</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Delete</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         No logs found
                       </TableCell>
                     </TableRow>
@@ -398,21 +398,21 @@ export function LogsPage() {
                       const hasLocation = log.latitude != null && log.longitude != null;
 
                       return (
-                        <TableRow key={log.id} className="border-[#D7D3CA]">
+                        <TableRow key={log.id} className="border-border">
                           <TableCell>
                             <Badge className={getTypeBadge(log.category)}>
                               <Icon className="w-3 h-3 mr-1" />
                               {getTypeLabel(log.category)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-gray-300">{log.driver_name ?? '—'}</TableCell>
-                          <TableCell className="text-gray-300">{log.vehicle_rego ?? '—'}</TableCell>
-                          <TableCell className="text-gray-300 max-w-[24rem]">{log.description}</TableCell>
-                          <TableCell className="text-gray-300">{formatDateTime(log.created_at)}</TableCell>
+                          <TableCell className="text-foreground">{log.driver_name ?? '—'}</TableCell>
+                          <TableCell className="text-foreground">{log.vehicle_rego ?? '—'}</TableCell>
+                          <TableCell className="text-foreground max-w-[24rem]">{log.description}</TableCell>
+                          <TableCell className="text-foreground">{formatDateTime(log.created_at)}</TableCell>
                           <TableCell>
                             <Badge className={getSeverityBadge(log.severity)}>{log.severity}</Badge>
                           </TableCell>
-                          <TableCell className="text-gray-300 text-xs">
+                          <TableCell className="text-foreground text-xs">
                             {hasLocation ? (
                               <div className="space-y-1">
                                 <p>
@@ -437,7 +437,7 @@ export function LogsPage() {
                             {log.photo_path && log.photo_url ? (
                               <Button
                                 size="sm"
-                                className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs"
+                                className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs"
                                 onClick={() => setPreviewUrl(log.photo_url ?? null)}
                               >
                                 <ImageIcon className="w-3.5 h-3.5 mr-1" />
@@ -449,7 +449,7 @@ export function LogsPage() {
                           </TableCell>
                           <TableCell>
                             {log.shift_id ? (
-                              <Button asChild size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs">
+                              <Button asChild size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs">
                                 <Link to={`/shifts/${log.shift_id}`}>Shift Details</Link>
                               </Button>
                             ) : (
@@ -460,7 +460,7 @@ export function LogsPage() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              className="bg-red-700 text-white hover:bg-red-600 text-xs"
+                              className="bg-red-700 text-white hover:bg-red-800 text-xs"
                               disabled={deletingLogId === log.id}
                               onClick={() => setDeleteLogId(log.id)}
                             >
@@ -479,35 +479,35 @@ export function LogsPage() {
       </Card>
 
       <Dialog open={Boolean(previewUrl)} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA] max-w-3xl [&>button]:text-[#BE1C2D] [&>button:hover]:text-[#e55a25]">
+        <DialogContent className="bg-card border-border max-w-3xl [&>button]:text-[#BE1C2D] [&>button:hover]:text-[#A81828]">
           <DialogHeader>
-            <DialogTitle className="text-white">Driver Log Photo</DialogTitle>
+            <DialogTitle className="text-foreground">Driver Log Photo</DialogTitle>
           </DialogHeader>
           {previewUrl ? (
             <img
               src={previewUrl}
               alt="Driver log"
-              className="w-full max-h-[75vh] object-contain rounded-lg border border-[#D7D3CA]"
+              className="w-full max-h-[75vh] object-contain rounded-lg border border-border"
             />
           ) : null}
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={Boolean(deleteLogId)} onOpenChange={(open) => !open && setDeleteLogId(null)}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Log</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">Delete Log</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               This will permanently delete the selected log. Continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700" disabled={Boolean(deletingLogId)}>
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted" disabled={Boolean(deletingLogId)}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteLog}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-700 text-white hover:bg-red-800"
               disabled={Boolean(deletingLogId)}
             >
               {deletingLogId ? 'Deleting...' : 'Delete Log'}

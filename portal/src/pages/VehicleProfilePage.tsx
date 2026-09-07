@@ -54,21 +54,21 @@ function fmtDate(d: string | null | undefined) {
   return formatPerthDateTime(d);
 }
 function statusBadge(s: string | null | undefined) {
-  if (s === 'active') return 'bg-blue-950 text-blue-300 border-blue-800';
-  if (s === 'completed') return 'bg-green-950 text-green-400 border-green-900';
-  if (s === 'cancelled') return 'bg-red-950 text-red-400 border-red-900';
-  return 'bg-gray-800 text-gray-400 border-[#C4C0B7]';
+  if (s === 'active') return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (s === 'completed') return 'bg-green-50 text-green-700 border-green-200';
+  if (s === 'cancelled') return 'bg-red-50 text-red-700 border-red-200';
+  return 'bg-muted text-muted-foreground border-input';
 }
 function vehicleStatusBadge(s: string | null | undefined) {
-  if (s === 'active') return 'bg-green-950 text-green-400 border-green-900';
-  if (s === 'maintenance') return 'bg-yellow-950 text-yellow-400 border-yellow-900';
-  return 'bg-gray-800 text-gray-400 border-[#C4C0B7]';
+  if (s === 'active') return 'bg-green-50 text-green-700 border-green-200';
+  if (s === 'maintenance') return 'bg-yellow-50 text-yellow-800 border-yellow-200';
+  return 'bg-muted text-muted-foreground border-input';
 }
 function maintStatusBadge(s: string) {
-  if (s === 'completed') return 'bg-green-950 text-green-400 border-green-900';
-  if (s === 'pending') return 'bg-yellow-950 text-yellow-400 border-yellow-900';
-  if (s === 'cancelled') return 'bg-red-950 text-red-400 border-red-900';
-  return 'bg-gray-800 text-gray-400 border-[#C4C0B7]';
+  if (s === 'completed') return 'bg-green-50 text-green-700 border-green-200';
+  if (s === 'pending') return 'bg-yellow-50 text-yellow-800 border-yellow-200';
+  if (s === 'cancelled') return 'bg-red-50 text-red-700 border-red-200';
+  return 'bg-muted text-muted-foreground border-input';
 }
 
 export function VehicleProfilePage() {
@@ -295,7 +295,7 @@ export function VehicleProfilePage() {
   }, [driverId, id]);
 
   if (loading) return <div className="flex justify-center py-16"><Loader className="w-8 h-8 text-[#BE1C2D] animate-spin" /></div>;
-  if (error || !vehicle) return <Card className="bg-red-950 border-red-900"><CardContent className="p-4 text-red-400">{error ?? 'Vehicle not found'}</CardContent></Card>;
+  if (error || !vehicle) return <Card className="bg-red-50 border-red-200"><CardContent className="p-4 text-red-700">{error ?? 'Vehicle not found'}</CardContent></Card>;
 
   const gpsActive = latestLocation?.created_at
     ? new Date(latestLocation.created_at) > new Date(Date.now() - 5 * 60 * 1000) : false;
@@ -304,14 +304,14 @@ export function VehicleProfilePage() {
   const totalMaintPages = Math.max(1, Math.ceil(maintCount / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">
+          <h1 className="text-3xl font-bold text-foreground mb-1">
             {vehicle.rego}
             {(vehicle.make || vehicle.model) && (
-              <span className="ml-3 text-xl font-normal text-gray-400">
+              <span className="ml-3 text-xl font-normal text-muted-foreground">
                 {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ')}
               </span>
             )}
@@ -319,13 +319,13 @@ export function VehicleProfilePage() {
           <div className="flex flex-wrap items-center gap-3 mt-1">
             <Badge className={`capitalize ${vehicleStatusBadge(vehicle.status)}`}>{vehicle.status ?? 'unknown'}</Badge>
             {driverName
-              ? <span className="text-sm text-gray-400">Assigned to <button className="text-[#BE1C2D] hover:underline" onClick={() => driverId && navigate(`/drivers/${driverId}`)}>{driverName}</button></span>
-              : <span className="text-sm text-gray-500">Unassigned</span>}
-            {activeShift && <Badge className="bg-blue-950 text-blue-300 border-blue-800">Active Shift</Badge>}
-            {gpsActive && <Badge className="bg-purple-950 text-purple-300 border-purple-800 flex items-center gap-1"><Navigation className="w-3 h-3" />GPS Active</Badge>}
+              ? <span className="text-sm text-muted-foreground">Assigned to <button className="text-[#BE1C2D] hover:underline" onClick={() => driverId && navigate(`/drivers/${driverId}`)}>{driverName}</button></span>
+              : <span className="text-sm text-muted-foreground">Unassigned</span>}
+            {activeShift && <Badge className="bg-blue-50 text-blue-700 border-blue-200">Active Shift</Badge>}
+            {gpsActive && <Badge className="bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1"><Navigation className="w-3 h-3" />GPS Active</Badge>}
           </div>
         </div>
-        <Button variant="default" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] shrink-0" onClick={() => navigate('/vehicles')}>
+        <Button variant="default" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] shrink-0" onClick={() => navigate('/vehicles')}>
           <ArrowLeft className="w-4 h-4 mr-2" />Back to Vehicles
         </Button>
       </div>
@@ -334,21 +334,21 @@ export function VehicleProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Current Odometer', value: latestOdo?.reading != null ? `${latestOdo.reading.toLocaleString()} km` : '—', icon: Gauge,      color: 'text-[#BE1C2D]'  },
-          { label: 'Total KM Logged',  value: totalKm != null ? `${totalKm.toLocaleString()} km` : '—',                     icon: TrendingUp, color: 'text-green-400'  },
-          { label: 'Hours This Week',  value: `${hoursThisWeek.toFixed(1)}h`,                                                icon: Clock,      color: 'text-blue-400'   },
-          { label: 'Shifts This Week', value: String(shiftsThisWeek),                                                        icon: Activity,   color: 'text-purple-400' },
+          { label: 'Total KM Logged',  value: totalKm != null ? `${totalKm.toLocaleString()} km` : '—',                     icon: TrendingUp, color: 'text-green-700'  },
+          { label: 'Hours This Week',  value: `${hoursThisWeek.toFixed(1)}h`,                                                icon: Clock,      color: 'text-blue-700'   },
+          { label: 'Shifts This Week', value: String(shiftsThisWeek),                                                        icon: Activity,   color: 'text-purple-700' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <Card key={label} className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card key={label} className="bg-card border-border">
             <CardContent className="p-4 flex items-center gap-3">
               <Icon className={`w-8 h-8 ${color} shrink-0`} />
-              <div><p className="text-xs text-gray-500">{label}</p><p className="text-xl font-semibold text-white">{value}</p></div>
+              <div><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold text-foreground">{value}</p></div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-[#FFFEFA] border border-[#D7D3CA]">
+        <TabsList className="bg-card border border-border">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="shifts">Shifts</TabsTrigger>
           <TabsTrigger value="odometer">Odometer</TabsTrigger>
@@ -360,10 +360,10 @@ export function VehicleProfilePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Vehicle details */}
-            <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2"><Truck className="w-4 h-4 text-[#BE1C2D]" />Vehicle Details</CardTitle>
-                <CardDescription className="text-gray-400">ID: {vehicle.id}</CardDescription>
+                <CardTitle className="text-foreground flex items-center gap-2"><Truck className="w-4 h-4 text-[#BE1C2D]" />Vehicle Details</CardTitle>
+                <CardDescription className="text-muted-foreground">ID: {vehicle.id}</CardDescription>
               </CardHeader>
               <CardContent className="text-sm">
                 <div className="grid grid-cols-2 gap-y-2">
@@ -380,13 +380,13 @@ export function VehicleProfilePage() {
                     ['Avg shift this week', weeklyShifts.length ? `${avgShiftHours.toFixed(1)}h` : '—'],
                   ] as [string, string][]).map(([label, value]) => (
                     <React.Fragment key={label}>
-                      <span className="text-gray-500">{label}</span>
-                      <span className="text-gray-200 text-right">{value}</span>
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="text-foreground text-right">{value}</span>
                     </React.Fragment>
                   ))}
                 </div>
                 {activeShift && (
-                  <Button variant="default" size="sm" className="mt-4 bg-[#BE1C2D] text-white hover:bg-[#e55a25]" onClick={() => navigate(`/shifts/${activeShift.id}`)}>
+                  <Button variant="default" size="sm" className="mt-4 bg-[#BE1C2D] text-white hover:bg-[#A81828]" onClick={() => navigate(`/shifts/${activeShift.id}`)}>
                     View Active Shift Details
                   </Button>
                 )}
@@ -394,13 +394,13 @@ export function VehicleProfilePage() {
             </Card>
 
             {/* Live GPS */}
-            <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Navigation className="w-4 h-4 text-[#BE1C2D]" />Live GPS
                   {gpsActive && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block ml-1" />}
                 </CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardDescription className="text-muted-foreground">
                   {latestLocation?.latitude != null && latestLocation?.longitude != null
                     ? `${latestLocation.latitude.toFixed(5)}, ${latestLocation.longitude.toFixed(5)} · updated ${latestLocation.created_at ? formatDistanceToNowStrict(new Date(latestLocation.created_at), { addSuffix: true }) : 'N/A'}`
                     : driverName ? 'No location data for current driver' : 'No driver assigned'}
@@ -411,18 +411,18 @@ export function VehicleProfilePage() {
                   <>
                     <div ref={gpsMapRef} className="w-full rounded-b-lg" style={{ height: 280 }} />
                     <div className="px-4 py-2 flex gap-2">
-                      <Button asChild size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs">
+                      <Button asChild size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs">
                         <a href={`https://www.google.com/maps?q=${latestLocation.latitude},${latestLocation.longitude}`} target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
                       </Button>
                       {driverId && (
-                        <Button size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs" onClick={() => navigate(`/drivers/${driverId}`)}>
+                        <Button size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs" onClick={() => navigate(`/drivers/${driverId}`)}>
                           Driver Profile
                         </Button>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                     <MapPin className="w-8 h-8 mb-2 opacity-30" />
                     <p className="text-sm">{driverName ? 'No GPS location available' : 'Assign a driver to track GPS'}</p>
                   </div>
@@ -434,47 +434,47 @@ export function VehicleProfilePage() {
 
         {/* ── Shifts ── */}
         <TabsContent value="shifts">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Shift History</CardTitle>
-              <CardDescription className="text-gray-400">{shiftCount} total shifts</CardDescription>
+              <CardTitle className="text-foreground">Shift History</CardTitle>
+              <CardDescription className="text-muted-foreground">{shiftCount} total shifts</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Start</TableHead>
-                    <TableHead className="text-gray-400">End</TableHead>
-                    <TableHead className="text-gray-400">Duration</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400"></TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Start</TableHead>
+                    <TableHead className="text-muted-foreground">End</TableHead>
+                    <TableHead className="text-muted-foreground">Duration</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {shifts.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-gray-500">No shifts found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No shifts found.</TableCell></TableRow>
                   ) : shifts.map((s) => {
                     const mins = differenceInMinutes(s.ended_at ? new Date(s.ended_at) : new Date(), new Date(s.started_at!));
                     const dur = mins >= 60 ? `${(mins / 60).toFixed(1)}h` : `${mins}m`;
                     return (
-                      <TableRow key={s.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300">{s.driver_name ?? '—'}</TableCell>
-                        <TableCell className="text-gray-300">{fmtDate(s.started_at)}</TableCell>
-                        <TableCell className="text-gray-300">{s.ended_at ? fmtDate(s.ended_at) : <Badge className="bg-blue-950 text-blue-300 border-blue-800">Active</Badge>}</TableCell>
-                        <TableCell className="text-gray-300">{dur}</TableCell>
+                      <TableRow key={s.id} className="border-border">
+                        <TableCell className="text-foreground">{s.driver_name ?? '—'}</TableCell>
+                        <TableCell className="text-foreground">{fmtDate(s.started_at)}</TableCell>
+                        <TableCell className="text-foreground">{s.ended_at ? fmtDate(s.ended_at) : <Badge className="bg-blue-50 text-blue-700 border-blue-200">Active</Badge>}</TableCell>
+                        <TableCell className="text-foreground">{dur}</TableCell>
                         <TableCell><Badge className={`capitalize text-xs ${statusBadge(s.status)}`}>{s.status}</Badge></TableCell>
-                        <TableCell><Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 h-7 px-2 text-xs" onClick={() => navigate(`/shifts/${s.id}`)}>View</Button></TableCell>
+                        <TableCell><Button variant="ghost" size="sm" className="text-blue-700 hover:text-blue-700 h-7 px-2 text-xs" onClick={() => navigate(`/shifts/${s.id}`)}>View</Button></TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {shiftPage} of {totalShiftPages}</p>
+                <p className="text-sm text-muted-foreground">Page {shiftPage} of {totalShiftPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={shiftPage === 1} onClick={() => setShiftPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={shiftPage >= totalShiftPages} onClick={() => setShiftPage((p) => Math.min(totalShiftPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={shiftPage === 1} onClick={() => setShiftPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={shiftPage >= totalShiftPages} onClick={() => setShiftPage((p) => Math.min(totalShiftPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>
@@ -483,10 +483,10 @@ export function VehicleProfilePage() {
 
         {/* ── Odometer ── */}
         <TabsContent value="odometer">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2"><Gauge className="w-4 h-4 text-[#BE1C2D]" />Odometer Log</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className="text-foreground flex items-center gap-2"><Gauge className="w-4 h-4 text-[#BE1C2D]" />Odometer Log</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 {latestOdo?.reading != null && firstOdo?.reading != null
                   ? `Current: ${latestOdo.reading.toLocaleString()} km · First recorded: ${firstOdo.reading.toLocaleString()} km · ${totalKm != null ? `${totalKm.toLocaleString()} km logged` : ''}`
                   : `${odoCount} readings`}
@@ -495,37 +495,37 @@ export function VehicleProfilePage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Captured</TableHead>
-                    <TableHead className="text-gray-400">Reading</TableHead>
-                    <TableHead className="text-gray-400">Change</TableHead>
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Location</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Captured</TableHead>
+                    <TableHead className="text-muted-foreground">Reading</TableHead>
+                    <TableHead className="text-muted-foreground">Change</TableHead>
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Location</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {odoLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-gray-500">No odometer records found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No odometer records found.</TableCell></TableRow>
                   ) : odoLogs.map((log, idx) => {
                     const next = odoLogs[idx + 1];
                     const change = next?.reading != null && log.reading != null ? log.reading - next.reading : null;
                     return (
-                      <TableRow key={log.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300">{fmtDate(log.captured_at)}</TableCell>
-                        <TableCell className="text-gray-200 font-medium">{log.reading != null ? `${log.reading.toLocaleString()} km` : '—'}</TableCell>
-                        <TableCell className="text-gray-400 text-xs">{change != null ? `+${change.toLocaleString()} km` : '—'}</TableCell>
-                        <TableCell className="text-gray-300">{log.driver_id ? <button className="text-[#BE1C2D] hover:underline text-xs" onClick={() => navigate(`/drivers/${log.driver_id}`)}>{log.driver_id.slice(0, 8)}…</button> : '—'}</TableCell>
-                        <TableCell className="text-gray-300 text-xs">{log.lat != null && log.lng != null ? `${log.lat.toFixed(4)}, ${log.lng.toFixed(4)}` : '—'}</TableCell>
+                      <TableRow key={log.id} className="border-border">
+                        <TableCell className="text-foreground">{fmtDate(log.captured_at)}</TableCell>
+                        <TableCell className="text-foreground font-medium">{log.reading != null ? `${log.reading.toLocaleString()} km` : '—'}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{change != null ? `+${change.toLocaleString()} km` : '—'}</TableCell>
+                        <TableCell className="text-foreground">{log.driver_id ? <button className="text-[#BE1C2D] hover:underline text-xs" onClick={() => navigate(`/drivers/${log.driver_id}`)}>{log.driver_id.slice(0, 8)}…</button> : '—'}</TableCell>
+                        <TableCell className="text-foreground text-xs">{log.lat != null && log.lng != null ? `${log.lat.toFixed(4)}, ${log.lng.toFixed(4)}` : '—'}</TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {odoPage} of {totalOdoPages}</p>
+                <p className="text-sm text-muted-foreground">Page {odoPage} of {totalOdoPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={odoPage === 1} onClick={() => setOdoPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={odoPage >= totalOdoPages} onClick={() => setOdoPage((p) => Math.min(totalOdoPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={odoPage === 1} onClick={() => setOdoPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={odoPage >= totalOdoPages} onClick={() => setOdoPage((p) => Math.min(totalOdoPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>
@@ -534,43 +534,43 @@ export function VehicleProfilePage() {
 
         {/* ── Maintenance ── */}
         <TabsContent value="maintenance">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2"><Wrench className="w-4 h-4 text-[#BE1C2D]" />Maintenance Log</CardTitle>
-              <CardDescription className="text-gray-400">{maintCount} records</CardDescription>
+              <CardTitle className="text-foreground flex items-center gap-2"><Wrench className="w-4 h-4 text-[#BE1C2D]" />Maintenance Log</CardTitle>
+              <CardDescription className="text-muted-foreground">{maintCount} records</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Date</TableHead>
-                    <TableHead className="text-gray-400">Service</TableHead>
-                    <TableHead className="text-gray-400">Odometer</TableHead>
-                    <TableHead className="text-gray-400">Provider</TableHead>
-                    <TableHead className="text-gray-400">Cost</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-muted-foreground">Service</TableHead>
+                    <TableHead className="text-muted-foreground">Odometer</TableHead>
+                    <TableHead className="text-muted-foreground">Provider</TableHead>
+                    <TableHead className="text-muted-foreground">Cost</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {maintLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-gray-500">No maintenance records found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No maintenance records found.</TableCell></TableRow>
                   ) : maintLogs.map((m) => (
-                    <TableRow key={m.id} className="border-[#D7D3CA]">
-                      <TableCell className="text-gray-300">{fmtDate(m.service_date)}</TableCell>
-                      <TableCell className="text-gray-200">{m.service_type}</TableCell>
-                      <TableCell className="text-gray-300">{m.odometer != null ? `${m.odometer.toLocaleString()} km` : '—'}</TableCell>
-                      <TableCell className="text-gray-300">{m.provider ?? '—'}</TableCell>
-                      <TableCell className="text-gray-300">{m.cost != null ? `$${m.cost.toLocaleString()}` : '—'}</TableCell>
+                    <TableRow key={m.id} className="border-border">
+                      <TableCell className="text-foreground">{fmtDate(m.service_date)}</TableCell>
+                      <TableCell className="text-foreground">{m.service_type}</TableCell>
+                      <TableCell className="text-foreground">{m.odometer != null ? `${m.odometer.toLocaleString()} km` : '—'}</TableCell>
+                      <TableCell className="text-foreground">{m.provider ?? '—'}</TableCell>
+                      <TableCell className="text-foreground">{m.cost != null ? `$${m.cost.toLocaleString()}` : '—'}</TableCell>
                       <TableCell><Badge className={`capitalize text-xs ${maintStatusBadge(m.status)}`}>{m.status}</Badge></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {maintPage} of {totalMaintPages}</p>
+                <p className="text-sm text-muted-foreground">Page {maintPage} of {totalMaintPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={maintPage === 1} onClick={() => setMaintPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={maintPage >= totalMaintPages} onClick={() => setMaintPage((p) => Math.min(totalMaintPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={maintPage === 1} onClick={() => setMaintPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={maintPage >= totalMaintPages} onClick={() => setMaintPage((p) => Math.min(totalMaintPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>

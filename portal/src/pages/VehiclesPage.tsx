@@ -268,24 +268,24 @@ export function VehiclesPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-950 text-green-400 border-green-900';
-      case 'maintenance': return 'bg-yellow-950 text-yellow-400 border-yellow-900';
-      default: return 'bg-gray-800 text-gray-400 border-[#C4C0B7]';
+      case 'active': return 'bg-green-50 text-green-700 border-green-200';
+      case 'maintenance': return 'bg-yellow-50 text-yellow-800 border-yellow-200';
+      default: return 'bg-muted text-muted-foreground border-input';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Vehicles</h1>
-          <p className="text-gray-400">Manage your vehicle fleet</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Vehicles</h1>
+          <p className="text-muted-foreground">Manage your vehicle fleet</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="bg-[#BE1C2D] hover:bg-[#A81828] text-white">
           <Plus className="w-4 h-4 mr-2" /> Add Vehicle
@@ -294,36 +294,36 @@ export function VehiclesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
         {[
-          { label: 'Total Vehicles', value: totalCount, color: 'text-white' },
-          { label: 'Active', value: activeCount, color: 'text-green-400' },
-          { label: 'On Shift', value: onShiftCount, color: 'text-blue-400' },
-          { label: 'In Maintenance', value: maintenanceCount, color: 'text-yellow-400' },
-          { label: 'Inactive', value: totalCount - activeCount - maintenanceCount, color: 'text-gray-300' },
+          { label: 'Total Vehicles', value: totalCount, color: 'text-foreground' },
+          { label: 'Active', value: activeCount, color: 'text-green-700' },
+          { label: 'On Shift', value: onShiftCount, color: 'text-blue-700' },
+          { label: 'In Maintenance', value: maintenanceCount, color: 'text-yellow-800' },
+          { label: 'Inactive', value: totalCount - activeCount - maintenanceCount, color: 'text-foreground' },
         ].map(({ label, value, color }) => (
-          <Card key={label} className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card key={label} className="bg-card border-border">
             <CardContent className="p-6">
-              <p className="text-sm text-gray-400 mb-1">{label}</p>
+              <p className="text-sm text-muted-foreground mb-1">{label}</p>
               <p className={`text-3xl font-bold ${color}`}>{loading ? '-' : value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-white">All Vehicles</CardTitle>
-              <CardDescription className="text-gray-400">View and manage vehicle information</CardDescription>
+              <CardTitle className="text-foreground">All Vehicles</CardTitle>
+              <CardDescription className="text-muted-foreground">View and manage vehicle information</CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search vehicles..."
                 value={searchQuery}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -337,41 +337,41 @@ export function VehiclesPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Rego</TableHead>
-                    <TableHead className="text-gray-400">Make / Model</TableHead>
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400">Shift</TableHead>
-                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Rego</TableHead>
+                    <TableHead className="text-muted-foreground">Make / Model</TableHead>
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Shift</TableHead>
+                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredVehicles.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         No vehicles found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredVehicles.map((vehicle) => {
                       return (
-                        <TableRow key={vehicle.id} className="border-[#D7D3CA]">
-                          <TableCell className="font-medium text-white">{vehicle.rego}</TableCell>
-                          <TableCell className="text-gray-300">
+                        <TableRow key={vehicle.id} className="border-border">
+                          <TableCell className="font-medium text-foreground">{vehicle.rego}</TableCell>
+                          <TableCell className="text-foreground">
                             {[vehicle.make, vehicle.model].filter(Boolean).join(' ') || '—'}
                           </TableCell>
-                          <TableCell className="text-gray-300">
-                            {vehicle.driver_name || <span className="text-gray-500">Unassigned</span>}
+                          <TableCell className="text-foreground">
+                            {vehicle.driver_name || <span className="text-muted-foreground">Unassigned</span>}
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadge(vehicle.status)}>{vehicle.status}</Badge>
                           </TableCell>
                           <TableCell>
                             {vehicle.on_shift ? (
-                              <Badge className="bg-blue-950 text-blue-300 border-blue-800">On Shift</Badge>
+                              <Badge className="bg-blue-50 text-blue-700 border-blue-200">On Shift</Badge>
                             ) : (
-                              <Badge className="bg-gray-900 text-gray-300 border-[#C4C0B7]">Off Shift</Badge>
+                              <Badge className="bg-muted text-foreground border-input">Off Shift</Badge>
                             )}
                           </TableCell>
                           <TableCell>
@@ -379,7 +379,7 @@ export function VehiclesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-blue-400 hover:text-blue-300 h-8 px-2 text-xs"
+                                className="text-blue-700 hover:text-blue-700 h-8 px-2 text-xs"
                                 onClick={() => navigate(`/vehicles/${vehicle.id}`)}
                               >
                                 Details
@@ -387,7 +387,7 @@ export function VehiclesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
+                                className="text-muted-foreground hover:text-blue-700 h-8 w-8 p-0"
                                 onClick={() => {
                                   openAssignModal(vehicle);
                                 }}
@@ -397,7 +397,7 @@ export function VehiclesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
+                                className="text-muted-foreground hover:text-red-700 h-8 w-8 p-0"
                                 onClick={() => { setSelectedVehicle(vehicle); setDeleteDialog(true); }}
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -417,37 +417,37 @@ export function VehiclesPage() {
 
       {/* Add Vehicle Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open: boolean) => { setDialogOpen(open); if (!open) setFormData({ rego: '', make: '', model: '', status: 'active' }); }}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Add Vehicle</DialogTitle>
-            <DialogDescription className="text-gray-400">Add a new vehicle to the fleet</DialogDescription>
+            <DialogTitle className="text-foreground">Add Vehicle</DialogTitle>
+            <DialogDescription className="text-muted-foreground">Add a new vehicle to the fleet</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-300">Rego <span className="text-red-400">*</span></Label>
+              <Label className="text-foreground">Rego <span className="text-red-700">*</span></Label>
               <Input
                 value={formData.rego}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, rego: e.target.value })}
                 placeholder="ABC123"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <div>
-              <Label className="text-gray-300">Make</Label>
+              <Label className="text-foreground">Make</Label>
               <Input
                 value={formData.make}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, make: e.target.value })}
                 placeholder="Ford"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <div>
-              <Label className="text-gray-300">Model</Label>
+              <Label className="text-foreground">Model</Label>
               <Input
                 value={formData.model}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, model: e.target.value })}
                 placeholder="Transit"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <Button onClick={handleAddVehicle} className="w-full bg-[#BE1C2D] hover:bg-[#A81828] text-white">
@@ -459,21 +459,21 @@ export function VehiclesPage() {
 
       {/* Assign Driver Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Assign Driver</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Assign Driver</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Assign or change the driver for {selectedVehicle?.rego}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="vehicle-driver-select" className="text-gray-300">Driver</Label>
+              <Label htmlFor="vehicle-driver-select" className="text-foreground">Driver</Label>
               <select
                 id="vehicle-driver-select"
                 value={String(selectedDriverId || '')}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(String(e.target.value))}
-                className="w-full bg-[#F5F2EB] border border-[#C4C0B7] text-white p-2 rounded"
+                className="w-full bg-background border border-input text-foreground p-2 rounded"
               >
                 <option value="">Unassigned</option>
                 {drivers.map((driver) => (
@@ -496,16 +496,16 @@ export function VehiclesPage() {
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Vehicle</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">Delete Vehicle</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Are you sure you want to delete {selectedVehicle?.rego}? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 text-white hover:bg-red-700">
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-700 text-white hover:bg-red-800">
               Delete
             </AlertDialogAction>
           </div>

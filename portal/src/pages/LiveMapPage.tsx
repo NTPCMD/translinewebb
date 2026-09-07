@@ -194,7 +194,7 @@ const clearRoute = () => {
         );
 
         const isCompleted = shift.status === 'completed';
-        const routeColor = isCompleted ? '#1a1a2e' : '#ff6b35';
+        const routeColor = isCompleted ? '#1a1a2e' : '#BE1C2D';
 
         const polyline = L.polyline(coords, {
           color: routeColor,
@@ -565,17 +565,17 @@ const clearRoute = () => {
 
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {/* {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )} */}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Live Map</h1>
-          <p className="text-gray-400">Real-time driver and vehicle tracking</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Live Map</h1>
+          <p className="text-muted-foreground">Real-time driver and vehicle tracking</p>
         </div>
         <Button
           className="bg-[#BE1C2D] hover:bg-[#A81828] text-white"
@@ -586,12 +586,12 @@ const clearRoute = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA] lg:col-span-3">
+        <Card className="bg-card border-border lg:col-span-3">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle className="text-white">Live Map</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-foreground">Live Map</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Pin locations update in realtime via Supabase. All timestamps shown in {PERTH_TIME_LABEL}.
                 </CardDescription>
               </div>
@@ -600,9 +600,9 @@ const clearRoute = () => {
           <CardContent>
             {routeLoading && (
               <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/40 rounded-lg">
-                <div className="flex items-center gap-2 bg-[#FFFEFA] px-4 py-2 rounded-lg border border-[#C4C0B7]">
+                <div className="flex items-center gap-2 bg-card px-4 py-2 rounded-lg border border-input">
                   <Loader className="w-4 h-4 text-[#3B82F6] animate-spin" />
-                  <span className="text-sm text-gray-300">Loading route...</span>
+                  <span className="text-sm text-foreground">Loading route...</span>
                 </div>
               </div>
             )}
@@ -610,7 +610,7 @@ const clearRoute = () => {
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-green-700 text-white hover:bg-green-600"
+                  className="bg-green-700 text-white hover:bg-green-800"
                   disabled={!startPoint}
                   onClick={() => flyToQuickPoint(startPoint, routeMarkerRefs.current.start)}
                 >
@@ -619,7 +619,7 @@ const clearRoute = () => {
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-blue-700 text-white hover:bg-blue-600"
+                  className="bg-blue-700 text-white hover:bg-blue-800"
                   disabled={!latestPoint}
                   onClick={() => flyToQuickPoint(latestPoint, routeMarkerRefs.current.latest)}
                 >
@@ -628,7 +628,7 @@ const clearRoute = () => {
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-700 disabled:text-gray-300"
+                  className="bg-red-700 text-white hover:bg-red-800 disabled:bg-muted disabled:text-foreground"
                   disabled={!lastStopPoint}
                   onClick={() => flyToQuickPoint(lastStopPoint, routeMarkerRefs.current.lastStop)}
                 >
@@ -637,7 +637,7 @@ const clearRoute = () => {
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-[#1D4ED8] text-white hover:bg-[#1E40AF] disabled:bg-gray-700 disabled:text-gray-300"
+                  className="bg-[#1D4ED8] text-white hover:bg-[#1E40AF] disabled:bg-muted disabled:text-foreground"
                   disabled={stopPoints.length < 2}
                   onClick={goToPreviousStop}
                 >
@@ -647,14 +647,14 @@ const clearRoute = () => {
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-[#7C3AED] text-white hover:bg-[#6D28D9] disabled:bg-gray-700 disabled:text-gray-300"
+                  className="bg-[#7C3AED] text-white hover:bg-[#6D28D9] disabled:bg-muted disabled:text-foreground"
                   disabled={stopPoints.length < 2}
                   onClick={goToNextStop}
                 >
                   Next Stop
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
-                <span className="text-xs text-gray-400 self-center">
+                <span className="text-xs text-muted-foreground self-center">
                   {stopPoints.length > 0 ? `Stop ${activeStopIndex + 1} of ${stopPoints.length}` : 'No stops'}
                 </span>
               </div>
@@ -665,18 +665,18 @@ const clearRoute = () => {
         </Card>
 
         <div className="space-y-6">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Filters</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className="text-foreground">Filters</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Refine the live map view
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-gray-300">Vehicle</Label>
+                <Label className="text-foreground">Vehicle</Label>
                 <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-                  <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+                  <SelectTrigger className="bg-background border-input text-foreground">
                     <SelectValue placeholder="All vehicles" />
                   </SelectTrigger>
 
@@ -694,10 +694,10 @@ const clearRoute = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Active Shifts</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className="text-foreground">Active Shifts</CardTitle>
+              <CardDescription className="text-muted-foreground">
 
               </CardDescription>
             </CardHeader>
@@ -713,34 +713,34 @@ const clearRoute = () => {
                       type="button"
                       key={shift.id}
                       onClick={() => drawRouteForShift(shift)}
-                      className={`w-full text-left p-3 bg-[#F5F2EB] rounded-lg border transition-colors ${
+                      className={`w-full text-left p-3 bg-background rounded-lg border transition-colors ${
                         selectedShiftId === shift.id
                           ? 'border-[#3B82F6]'
-                          : 'border-[#D7D3CA] hover:border-[#BE1C2D]'
+                          : 'border-border hover:border-[#BE1C2D]'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="min-w-0">
-                          <p className="font-medium text-white truncate">
+                          <p className="font-medium text-foreground truncate">
                             {shift?.driver_name || 'Unknown'}
                           </p>
                           
-                          <p className="text-gray-400 text-xs mb-2">Vehicle: {shift.vehicle_rego}</p>
+                          <p className="text-muted-foreground text-xs mb-2">Vehicle: {shift.vehicle_rego}</p>
                           {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.online_status === 'online' ? (
                           <>
-                          <p className="text-gray-400 text-xs mb-2"> Device ID: {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.device_id}</p>
-                          <Badge className="bg-green-950 text-green-400 border-green-900">
+                          <p className="text-muted-foreground text-xs mb-2"> Device ID: {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.device_id}</p>
+                          <Badge className="bg-green-50 text-green-700 border-green-200">
                             Online
                           </Badge>
                           </>
                         ) : (
-                          <Badge className="bg-amber-950 text-amber-300 border-amber-800">
+                          <Badge className="bg-amber-50 text-amber-800 border-amber-200">
                             Offline
                           </Badge>
                         )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <MapPin className="w-3 h-3 text-[#BE1C2D] flex-shrink-0" />
                         <span>
                           {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.location?.latitude?.toFixed(4)}, {gpsDrivers.find(d=>d.driver_id === shift.driver_id)?.location?.longitude?.toFixed(4)}
@@ -748,11 +748,11 @@ const clearRoute = () => {
                       </div>
                     </button>
                   )) : (
-                    <p className="text-gray-400 text-sm">No active shifts available.</p>
+                    <p className="text-muted-foreground text-sm">No active shifts available.</p>
                   )}
 
-                <div className="pt-3 border-t border-[#D7D3CA] space-y-2">
-                  <Label className="text-gray-300">Previous Shifts</Label>
+                <div className="pt-3 border-t border-border space-y-2">
+                  <Label className="text-foreground">Previous Shifts</Label>
                   <Select
                     value={selectedHistoryShiftId}
                     onValueChange={async (value) => {
@@ -770,7 +770,7 @@ const clearRoute = () => {
                       await drawRouteForShift(selectedShift);
                     }}
                   >
-                    <SelectTrigger className="bg-[#F5F2EB] border-[#C4C0B7] text-white">
+                    <SelectTrigger className="bg-background border-input text-foreground">
                       <SelectValue placeholder="Select previous shift" />
                     </SelectTrigger>
                     <SelectContent>
@@ -788,37 +788,37 @@ const clearRoute = () => {
                     <button
                       type="button"
                       onClick={() => drawRouteForShift(previousShifts.find(s => s.id === selectedHistoryShiftId)!)}
-                      className={`w-full text-left p-3 bg-[#F5F2EB] rounded-lg border transition-colors ${
+                      className={`w-full text-left p-3 bg-background rounded-lg border transition-colors ${
                         selectedShiftId === selectedHistoryShiftId
                           ? 'border-[#3B82F6]'
-                          : 'border-[#D7D3CA] hover:border-[#BE1C2D]'
+                          : 'border-border hover:border-[#BE1C2D]'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="min-w-0">
-                          <p className="font-medium text-white truncate">
+                          <p className="font-medium text-foreground truncate">
                             Driver Name: {previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_name || 'Unknown'}
                           </p>
                           
-                          <p className="text-gray-400 text-xs mb-2">Vehicle for Shift: {previousShifts.find(s => s.id === selectedHistoryShiftId)?.vehicle_rego}</p>
+                          <p className="text-muted-foreground text-xs mb-2">Vehicle for Shift: {previousShifts.find(s => s.id === selectedHistoryShiftId)?.vehicle_rego}</p>
                           {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.online_status === 'online' ? (
                           <>
-                          <p className="text-gray-400 text-xs mb-2"> Device ID: {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.device_id}</p>
-                          <p className="text-gray-400 text-xs">Driver Status: </p><Badge className="bg-green-950 text-green-400 border-green-900">
+                          <p className="text-muted-foreground text-xs mb-2"> Device ID: {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.device_id}</p>
+                          <p className="text-muted-foreground text-xs">Driver Status: </p><Badge className="bg-green-50 text-green-700 border-green-200">
                             Online
                           </Badge>
                           </>
                         ) : (
-                          <Badge className="bg-amber-950 text-amber-300 border-amber-800">
+                          <Badge className="bg-amber-50 text-amber-800 border-amber-200">
                             Offline
                           </Badge>
                         )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <MapPin className="w-3 h-3 text-[#BE1C2D] flex-shrink-0" />
                         <span>
-                          <p className='text-gray-400 text-xs'>
+                          <p className='text-muted-foreground text-xs'>
                             Latest Location:
                             </p>{gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.location?.latitude?.toFixed(4)}, {gpsDrivers.find(d=>d.driver_id === previousShifts.find(s => s.id === selectedHistoryShiftId)?.driver_id)?.location?.longitude?.toFixed(4)}
                         </span>

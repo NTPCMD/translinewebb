@@ -69,10 +69,10 @@ function pickFirstText(...values: Array<string | null | undefined>) {
 }
 
 function statusBadge(s: string | null | undefined) {
-  if (s === 'active') return 'bg-blue-950 text-blue-300 border-blue-800';
-  if (s === 'completed') return 'bg-green-950 text-green-400 border-green-900';
-  if (s === 'cancelled') return 'bg-red-950 text-red-400 border-red-900';
-  return 'bg-gray-800 text-gray-400 border-[#C4C0B7]';
+  if (s === 'active') return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (s === 'completed') return 'bg-green-50 text-green-700 border-green-200';
+  if (s === 'cancelled') return 'bg-red-50 text-red-700 border-red-200';
+  return 'bg-muted text-muted-foreground border-input';
 }
 
 export function DriverProfilePage() {
@@ -284,7 +284,7 @@ export function DriverProfilePage() {
     return () => { channel.unsubscribe(); };
   }, [driverId]);
 
-  if (!driverId) return <p className="text-gray-400">Driver ID missing.</p>;
+  if (!driverId) return <p className="text-muted-foreground">Driver ID missing.</p>;
   if (loading) return <div className="flex justify-center py-16"><Loader className="w-8 h-8 text-[#BE1C2D] animate-spin" /></div>;
 
   const driverName = driver?.full_name ?? driver?.name ?? driver?.email ?? driverId;
@@ -317,52 +317,52 @@ export function DriverProfilePage() {
   const totalStatusPages     = Math.max(1, Math.ceil(statusCount / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
-      {error && <Card className="bg-red-950 border-red-900"><CardContent className="p-4 text-red-400">{error}</CardContent></Card>}
+    <div className="portalPage space-y-6">
+      {error && <Card className="bg-red-50 border-red-200"><CardContent className="p-4 text-red-700">{error}</CardContent></Card>}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">{driverName}</h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
+          <h1 className="text-3xl font-bold text-foreground mb-1">{driverName}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             {driverEmail && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{driverEmail}</span>}
             {driverPhone && <span className="flex items-center gap-1"><PhoneCall className="w-3.5 h-3.5" />{driverPhone}</span>}
-            {driver?.licence_number && <span className="text-gray-500">Licence: {driver.licence_number}</span>}
+            {driver?.licence_number && <span className="text-muted-foreground">Licence: {driver.licence_number}</span>}
           </div>
         </div>
-        <Button variant="default" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] shrink-0" onClick={() => navigate('/drivers')}>
+        <Button variant="default" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] shrink-0" onClick={() => navigate('/drivers')}>
           <ArrowLeft className="w-4 h-4 mr-2" />Back to Drivers
         </Button>
       </div>
 
       {/* Status strip */}
       <div className="flex flex-wrap gap-2">
-        {isOnline ? <Badge className="bg-green-950 text-green-400 border-green-900">Online</Badge> : <Badge className="bg-gray-900 text-gray-400 border-[#C4C0B7]">Offline</Badge>}
-        {activeShift ? <Badge className="bg-blue-950 text-blue-300 border-blue-800">On Shift</Badge> : <Badge className="bg-gray-900 text-gray-400 border-[#C4C0B7]">Off Shift</Badge>}
-        {status?.on_break && <Badge className="bg-amber-950 text-amber-300 border-amber-800">On Break</Badge>}
-        {gpsActive && <Badge className="bg-purple-950 text-purple-300 border-purple-800 flex items-center gap-1"><Navigation className="w-3 h-3" />GPS Active</Badge>}
-        {driver?.status && <Badge className="bg-gray-900 text-gray-300 border-[#C4C0B7] capitalize">{driver.status}</Badge>}
+        {isOnline ? <Badge className="bg-green-50 text-green-700 border-green-200">Online</Badge> : <Badge className="bg-muted text-muted-foreground border-input">Offline</Badge>}
+        {activeShift ? <Badge className="bg-blue-50 text-blue-700 border-blue-200">On Shift</Badge> : <Badge className="bg-muted text-muted-foreground border-input">Off Shift</Badge>}
+        {status?.on_break && <Badge className="bg-amber-50 text-amber-800 border-amber-200">On Break</Badge>}
+        {gpsActive && <Badge className="bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1"><Navigation className="w-3 h-3" />GPS Active</Badge>}
+        {driver?.status && <Badge className="bg-muted text-foreground border-input capitalize">{driver.status}</Badge>}
       </div>
 
       {/* Weekly stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Hours This Week',  value: `${hoursThisWeek.toFixed(1)}h`,                                      icon: Clock,      color: 'text-[#BE1C2D]'  },
-          { label: 'Shifts This Week', value: String(weeklyShifts.length),                                          icon: Activity,   color: 'text-blue-400'   },
-          { label: 'Avg Shift Length', value: weeklyShifts.length ? `${avgShiftHours.toFixed(1)}h` : '—',          icon: TrendingUp, color: 'text-green-400'  },
-          { label: 'Total Shifts',     value: String(shiftCount),                                                   icon: Activity,   color: 'text-purple-400' },
+          { label: 'Shifts This Week', value: String(weeklyShifts.length),                                          icon: Activity,   color: 'text-blue-700'   },
+          { label: 'Avg Shift Length', value: weeklyShifts.length ? `${avgShiftHours.toFixed(1)}h` : '—',          icon: TrendingUp, color: 'text-green-700'  },
+          { label: 'Total Shifts',     value: String(shiftCount),                                                   icon: Activity,   color: 'text-purple-700' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <Card key={label} className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card key={label} className="bg-card border-border">
             <CardContent className="p-4 flex items-center gap-3">
               <Icon className={`w-8 h-8 ${color} shrink-0`} />
-              <div><p className="text-xs text-gray-500">{label}</p><p className="text-xl font-semibold text-white">{value}</p></div>
+              <div><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold text-foreground">{value}</p></div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-[#FFFEFA] border border-[#D7D3CA]">
+        <TabsList className="bg-card border border-border">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="shifts">Shifts</TabsTrigger>
           <TabsTrigger value="assignments">Vehicle Assignments</TabsTrigger>
@@ -373,10 +373,10 @@ export function DriverProfilePage() {
         {/* Overview */}
         <TabsContent value="overview">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">Driver Details</CardTitle>
-                <CardDescription className="text-gray-400">Core contact and identity information</CardDescription>
+                <CardTitle className="text-foreground">Driver Details</CardTitle>
+                <CardDescription className="text-muted-foreground">Core contact and identity information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-y-2">
@@ -387,18 +387,18 @@ export function DriverProfilePage() {
                     ['Driver ID', driverId],
                   ] as [string, string][]).map(([label, value]) => (
                     <React.Fragment key={label}>
-                      <span className="text-gray-500">{label}</span>
-                      <span className="text-gray-200 text-right break-all">{value}</span>
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="text-foreground text-right break-all">{value}</span>
                     </React.Fragment>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">Current Status</CardTitle>
-                <CardDescription className="text-gray-400">Live operational indicators</CardDescription>
+                <CardTitle className="text-foreground">Current Status</CardTitle>
+                <CardDescription className="text-muted-foreground">Live operational indicators</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-y-2">
@@ -413,26 +413,26 @@ export function DriverProfilePage() {
                     ['Latest odometer',   latestOdometer?.reading != null ? `${latestOdometer.reading.toLocaleString()} km` : '—'],
                   ] as [string, string][]).map(([label, value]) => (
                     <React.Fragment key={label}>
-                      <span className="text-gray-500">{label}</span>
-                      <span className="text-gray-200 text-right">{value}</span>
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="text-foreground text-right">{value}</span>
                     </React.Fragment>
                   ))}
                 </div>
                 {activeShift && (
-                  <Button variant="default" size="sm" className="mt-2 bg-[#BE1C2D] text-white hover:bg-[#e55a25]" onClick={() => navigate(`/shifts/${activeShift.id}`)}>
+                  <Button variant="default" size="sm" className="mt-2 bg-[#BE1C2D] text-white hover:bg-[#A81828]" onClick={() => navigate(`/shifts/${activeShift.id}`)}>
                     View Active Shift Details
                   </Button>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Navigation className="w-4 h-4 text-[#BE1C2D]" />Live GPS
                   {gpsActive && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block ml-1" />}
                 </CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardDescription className="text-muted-foreground">
                   {latestLocation?.latitude != null && latestLocation?.longitude != null
                     ? `${latestLocation.latitude.toFixed(5)}, ${latestLocation.longitude.toFixed(5)} · updated ${latestLocation.created_at ? formatDistanceToNowStrict(new Date(latestLocation.created_at), { addSuffix: true }) : 'N/A'}`
                     : 'No location data available'}
@@ -443,16 +443,16 @@ export function DriverProfilePage() {
                   <>
                     <div ref={gpsMapRef} className="w-full rounded-b-lg" style={{ height: 280 }} />
                     <div className="px-4 py-2 flex gap-2">
-                      <Button asChild size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs">
+                      <Button asChild size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs">
                         <a href={`https://www.google.com/maps?q=${latestLocation.latitude},${latestLocation.longitude}`} target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
                       </Button>
                       {assignedVehicle && (
-                        <Button size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#e55a25] text-xs" onClick={() => navigate(`/vehicles/${assignmentSnapshot?.current_vehicle_id}`)}>Vehicle Details</Button>
+                        <Button size="sm" className="bg-[#BE1C2D] text-white hover:bg-[#A81828] text-xs" onClick={() => navigate(`/vehicles/${assignmentSnapshot?.current_vehicle_id}`)}>Vehicle Details</Button>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                     <MapPin className="w-8 h-8 mb-2 opacity-30" /><p className="text-sm">No GPS location available</p>
                   </div>
                 )}
@@ -460,25 +460,25 @@ export function DriverProfilePage() {
             </Card>
 
             {latestOdometer && (
-              <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-white">Latest Odometer</CardTitle>
-                  <CardDescription className="text-gray-400">Most recent submission</CardDescription>
+                  <CardTitle className="text-foreground">Latest Odometer</CardTitle>
+                  <CardDescription className="text-muted-foreground">Most recent submission</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="grid grid-cols-2 gap-y-1">
-                    <span className="text-gray-500">Reading</span><span className="text-gray-200 text-right">{latestOdometer.reading != null ? `${latestOdometer.reading.toLocaleString()} km` : '—'}</span>
-                    <span className="text-gray-500">Captured</span><span className="text-gray-200 text-right">{fmtDate(latestOdometer.captured_at ?? latestOdometer.created_at)}</span>
-                    <span className="text-gray-500">Location</span><span className="text-gray-200 text-right">{latestOdometer.lat != null && latestOdometer.lng != null ? `${latestOdometer.lat.toFixed(4)}, ${latestOdometer.lng.toFixed(4)}` : '—'}</span>
+                    <span className="text-muted-foreground">Reading</span><span className="text-foreground text-right">{latestOdometer.reading != null ? `${latestOdometer.reading.toLocaleString()} km` : '—'}</span>
+                    <span className="text-muted-foreground">Captured</span><span className="text-foreground text-right">{fmtDate(latestOdometer.captured_at ?? latestOdometer.created_at)}</span>
+                    <span className="text-muted-foreground">Location</span><span className="text-foreground text-right">{latestOdometer.lat != null && latestOdometer.lng != null ? `${latestOdometer.lat.toFixed(4)}, ${latestOdometer.lng.toFixed(4)}` : '—'}</span>
                   </div>
                   {latestOdometer.signed_url ? (
                     <img src={latestOdometer.signed_url} alt="Latest odometer" className="w-full rounded-lg mt-2" />
                   ) : latestOdometer.photo_error ? (
-                    <div className="flex items-center justify-between rounded border border-red-900 bg-red-950/40 p-2 text-sm text-red-300">
+                    <div className="flex items-center justify-between rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
                       <span>Photo failed to load.</span>
-                      <Button variant="ghost" size="sm" className="text-red-300 hover:text-red-200" onClick={async () => { clearOdometerPhotoCache(latestOdometer.photo_path ?? null); setLatestOdometer(await resolveOdometerPhoto(latestOdometer)); }}>Retry</Button>
+                      <Button variant="ghost" size="sm" className="text-red-700 hover:text-red-700" onClick={async () => { clearOdometerPhotoCache(latestOdometer.photo_path ?? null); setLatestOdometer(await resolveOdometerPhoto(latestOdometer)); }}>Retry</Button>
                     </div>
-                  ) : <p className="text-sm text-gray-500">No photo.</p>}
+                  ) : <p className="text-sm text-muted-foreground">No photo.</p>}
                 </CardContent>
               </Card>
             )}
@@ -487,50 +487,50 @@ export function DriverProfilePage() {
 
         {/* Shifts */}
         <TabsContent value="shifts">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Shift History</CardTitle>
-              <CardDescription className="text-gray-400">{shiftCount} total shifts</CardDescription>
+              <CardTitle className="text-foreground">Shift History</CardTitle>
+              <CardDescription className="text-muted-foreground">{shiftCount} total shifts</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Start</TableHead>
-                    <TableHead className="text-gray-400">End</TableHead>
-                    <TableHead className="text-gray-400">Duration</TableHead>
-                    <TableHead className="text-gray-400">Breaks</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400"></TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Start</TableHead>
+                    <TableHead className="text-muted-foreground">End</TableHead>
+                    <TableHead className="text-muted-foreground">Duration</TableHead>
+                    <TableHead className="text-muted-foreground">Breaks</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {shifts.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-gray-500">No shifts found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No shifts found.</TableCell></TableRow>
                   ) : shifts.map((shift) => {
                     const mins = differenceInMinutes(shift.ended_at ? new Date(shift.ended_at) : new Date(), new Date(shift.started_at));
                     const dur = mins >= 60 ? `${(mins / 60).toFixed(1)}h` : `${mins}m`;
                     const vehicle = shift.vehicle_id ? vehicleMap.get(shift.vehicle_id) : null;
                     return (
-                      <TableRow key={shift.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300">{fmtDate(shift.started_at)}</TableCell>
-                        <TableCell className="text-gray-300">{shift.ended_at ? fmtDate(shift.ended_at) : <Badge className="bg-blue-950 text-blue-300 border-blue-800">Active</Badge>}</TableCell>
-                        <TableCell className="text-gray-300">{dur}</TableCell>
-                        <TableCell className="text-gray-300">{breakCounts[shift.id] ?? 0}</TableCell>
-                        <TableCell className="text-gray-300">{formatVehicleLabel(vehicle) ?? '—'}</TableCell>
+                      <TableRow key={shift.id} className="border-border">
+                        <TableCell className="text-foreground">{fmtDate(shift.started_at)}</TableCell>
+                        <TableCell className="text-foreground">{shift.ended_at ? fmtDate(shift.ended_at) : <Badge className="bg-blue-50 text-blue-700 border-blue-200">Active</Badge>}</TableCell>
+                        <TableCell className="text-foreground">{dur}</TableCell>
+                        <TableCell className="text-foreground">{breakCounts[shift.id] ?? 0}</TableCell>
+                        <TableCell className="text-foreground">{formatVehicleLabel(vehicle) ?? '—'}</TableCell>
                         <TableCell><Badge className={`capitalize text-xs ${statusBadge(shift.status)}`}>{shift.status}</Badge></TableCell>
-                        <TableCell><Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 h-7 px-2 text-xs" onClick={() => navigate(`/shifts/${shift.id}`)}>View</Button></TableCell>
+                        <TableCell><Button variant="ghost" size="sm" className="text-blue-700 hover:text-blue-700 h-7 px-2 text-xs" onClick={() => navigate(`/shifts/${shift.id}`)}>View</Button></TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {shiftPage} of {totalShiftPages}</p>
+                <p className="text-sm text-muted-foreground">Page {shiftPage} of {totalShiftPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={shiftPage === 1} onClick={() => setShiftPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={shiftPage >= totalShiftPages} onClick={() => setShiftPage((p) => Math.min(totalShiftPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={shiftPage === 1} onClick={() => setShiftPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={shiftPage >= totalShiftPages} onClick={() => setShiftPage((p) => Math.min(totalShiftPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>
@@ -539,46 +539,46 @@ export function DriverProfilePage() {
 
         {/* Assignments */}
         <TabsContent value="assignments">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Vehicle Assignments</CardTitle>
-              <CardDescription className="text-gray-400">Timeline of assigned vehicles</CardDescription>
+              <CardTitle className="text-foreground">Vehicle Assignments</CardTitle>
+              <CardDescription className="text-muted-foreground">Timeline of assigned vehicles</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Assigned</TableHead>
-                    <TableHead className="text-gray-400">Unassigned</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Duration</TableHead>
-                    <TableHead className="text-gray-400"></TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Assigned</TableHead>
+                    <TableHead className="text-muted-foreground">Unassigned</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Duration</TableHead>
+                    <TableHead className="text-muted-foreground"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {assignments.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-gray-500">No assignments found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No assignments found.</TableCell></TableRow>
                   ) : assignments.map((a) => {
                     const vehicle = vehicleMap.get(a.vehicle_id);
                     const durMins = differenceInMinutes(a.unassigned_at ? new Date(a.unassigned_at) : new Date(), new Date(a.assigned_at));
                     const durLabel = durMins >= 1440 ? `${(durMins / 1440).toFixed(0)}d` : durMins >= 60 ? `${(durMins / 60).toFixed(0)}h` : `${durMins}m`;
                     return (
-                      <TableRow key={a.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300">{fmtDate(a.assigned_at)}</TableCell>
-                        <TableCell className="text-gray-300">{a.unassigned_at ? fmtDate(a.unassigned_at) : <Badge className="bg-green-950 text-green-400 border-green-900">Current</Badge>}</TableCell>
-                        <TableCell className="text-gray-300">{formatVehicleLabel(vehicle) ?? a.vehicle_id}</TableCell>
-                        <TableCell className="text-gray-300">{durLabel}</TableCell>
-                        <TableCell>{vehicle && <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 h-7 px-2 text-xs" onClick={() => navigate(`/vehicles/${a.vehicle_id}`)}>Profile</Button>}</TableCell>
+                      <TableRow key={a.id} className="border-border">
+                        <TableCell className="text-foreground">{fmtDate(a.assigned_at)}</TableCell>
+                        <TableCell className="text-foreground">{a.unassigned_at ? fmtDate(a.unassigned_at) : <Badge className="bg-green-50 text-green-700 border-green-200">Current</Badge>}</TableCell>
+                        <TableCell className="text-foreground">{formatVehicleLabel(vehicle) ?? a.vehicle_id}</TableCell>
+                        <TableCell className="text-foreground">{durLabel}</TableCell>
+                        <TableCell>{vehicle && <Button variant="ghost" size="sm" className="text-blue-700 hover:text-blue-700 h-7 px-2 text-xs" onClick={() => navigate(`/vehicles/${a.vehicle_id}`)}>Profile</Button>}</TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {assignmentPage} of {totalAssignmentPages}</p>
+                <p className="text-sm text-muted-foreground">Page {assignmentPage} of {totalAssignmentPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={assignmentPage === 1} onClick={() => setAssignmentPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={assignmentPage >= totalAssignmentPages} onClick={() => setAssignmentPage((p) => Math.min(totalAssignmentPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={assignmentPage === 1} onClick={() => setAssignmentPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={assignmentPage >= totalAssignmentPages} onClick={() => setAssignmentPage((p) => Math.min(totalAssignmentPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>
@@ -587,36 +587,36 @@ export function DriverProfilePage() {
 
         {/* Odometer */}
         <TabsContent value="odometer">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Odometer Logs</CardTitle>
-              <CardDescription className="text-gray-400">Latest odometer submissions</CardDescription>
+              <CardTitle className="text-foreground">Odometer Logs</CardTitle>
+              <CardDescription className="text-muted-foreground">Latest odometer submissions</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Recorded</TableHead>
-                    <TableHead className="text-gray-400">Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Reading</TableHead>
-                    <TableHead className="text-gray-400">Location</TableHead>
-                    <TableHead className="text-gray-400">Photo</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Recorded</TableHead>
+                    <TableHead className="text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Reading</TableHead>
+                    <TableHead className="text-muted-foreground">Location</TableHead>
+                    <TableHead className="text-muted-foreground">Photo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {odometerLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-gray-500">No odometer logs found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No odometer logs found.</TableCell></TableRow>
                   ) : odometerLogs.map((log) => {
                     const vehicle = vehicleMap.get(log.vehicle_id);
                     return (
-                      <TableRow key={log.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300">{fmtDate(log.captured_at ?? log.created_at)}</TableCell>
-                        <TableCell className="text-gray-300">{formatVehicleLabel(vehicle) ?? log.vehicle_id}</TableCell>
-                        <TableCell className="text-gray-300">{log.reading != null ? `${log.reading.toLocaleString()} km` : '—'}</TableCell>
-                        <TableCell className="text-gray-300">{log.lat != null && log.lng != null ? `${log.lat.toFixed(4)}, ${log.lng.toFixed(4)}` : '—'}</TableCell>
-                        <TableCell className="text-gray-300">
-                          {log.signed_url ? <img src={log.signed_url} alt="Odometer" className="h-12 w-20 rounded border border-[#C4C0B7] object-cover" />
-                            : log.photo_error ? <div className="flex items-center gap-2 text-sm text-red-300"><span>Failed</span><Button variant="ghost" size="sm" className="text-red-300 hover:text-red-200" onClick={async () => { clearOdometerPhotoCache(log.photo_path ?? null); const r = await resolveOdometerPhoto(log); setOdometerLogs((prev) => prev.map((x) => x.id === log.id ? r : x)); }}>Retry</Button></div>
+                      <TableRow key={log.id} className="border-border">
+                        <TableCell className="text-foreground">{fmtDate(log.captured_at ?? log.created_at)}</TableCell>
+                        <TableCell className="text-foreground">{formatVehicleLabel(vehicle) ?? log.vehicle_id}</TableCell>
+                        <TableCell className="text-foreground">{log.reading != null ? `${log.reading.toLocaleString()} km` : '—'}</TableCell>
+                        <TableCell className="text-foreground">{log.lat != null && log.lng != null ? `${log.lat.toFixed(4)}, ${log.lng.toFixed(4)}` : '—'}</TableCell>
+                        <TableCell className="text-foreground">
+                          {log.signed_url ? <img src={log.signed_url} alt="Odometer" className="h-12 w-20 rounded border border-input object-cover" />
+                            : log.photo_error ? <div className="flex items-center gap-2 text-sm text-red-700"><span>Failed</span><Button variant="ghost" size="sm" className="text-red-700 hover:text-red-700" onClick={async () => { clearOdometerPhotoCache(log.photo_path ?? null); const r = await resolveOdometerPhoto(log); setOdometerLogs((prev) => prev.map((x) => x.id === log.id ? r : x)); }}>Retry</Button></div>
                             : 'No photo'}
                         </TableCell>
                       </TableRow>
@@ -625,10 +625,10 @@ export function DriverProfilePage() {
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {odometerPage} of {totalOdometerPages}</p>
+                <p className="text-sm text-muted-foreground">Page {odometerPage} of {totalOdometerPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={odometerPage === 1} onClick={() => setOdometerPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={odometerPage >= totalOdometerPages} onClick={() => setOdometerPage((p) => Math.min(totalOdometerPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={odometerPage === 1} onClick={() => setOdometerPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={odometerPage >= totalOdometerPages} onClick={() => setOdometerPage((p) => Math.min(totalOdometerPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>
@@ -637,45 +637,45 @@ export function DriverProfilePage() {
 
         {/* Status History */}
         <TabsContent value="status">
-          <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Status History</CardTitle>
-              <CardDescription className="text-gray-400">Driver status events timeline</CardDescription>
+              <CardTitle className="text-foreground">Status History</CardTitle>
+              <CardDescription className="text-muted-foreground">Driver status events timeline</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">State</TableHead>
-                    <TableHead className="text-gray-400">Started</TableHead>
-                    <TableHead className="text-gray-400">Ended</TableHead>
-                    <TableHead className="text-gray-400">Duration</TableHead>
-                    <TableHead className="text-gray-400">Shift</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">State</TableHead>
+                    <TableHead className="text-muted-foreground">Started</TableHead>
+                    <TableHead className="text-muted-foreground">Ended</TableHead>
+                    <TableHead className="text-muted-foreground">Duration</TableHead>
+                    <TableHead className="text-muted-foreground">Shift</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {statusEvents.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-gray-500">No status events found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No status events found.</TableCell></TableRow>
                   ) : statusEvents.map((ev) => {
                     const durMins = ev.started_at && ev.ended_at ? differenceInMinutes(new Date(ev.ended_at), new Date(ev.started_at)) : null;
                     const durLabel = durMins != null ? durMins >= 60 ? `${(durMins / 60).toFixed(1)}h` : `${durMins}m` : '—';
                     return (
-                      <TableRow key={ev.id} className="border-[#D7D3CA]">
-                        <TableCell className="text-gray-300 capitalize">{ev.state ?? 'unknown'}</TableCell>
-                        <TableCell className="text-gray-300">{fmtDate(ev.started_at)}</TableCell>
-                        <TableCell className="text-gray-300">{ev.ended_at ? fmtDate(ev.ended_at) : <Badge className="bg-blue-950 text-blue-300 border-blue-800">Active</Badge>}</TableCell>
-                        <TableCell className="text-gray-300">{durLabel}</TableCell>
-                        <TableCell>{ev.shift_id ? <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 h-7 px-2 text-xs font-mono" onClick={() => navigate(`/shifts/${ev.shift_id}`)}>{ev.shift_id.slice(0, 8)}…</Button> : '—'}</TableCell>
+                      <TableRow key={ev.id} className="border-border">
+                        <TableCell className="text-foreground capitalize">{ev.state ?? 'unknown'}</TableCell>
+                        <TableCell className="text-foreground">{fmtDate(ev.started_at)}</TableCell>
+                        <TableCell className="text-foreground">{ev.ended_at ? fmtDate(ev.ended_at) : <Badge className="bg-blue-50 text-blue-700 border-blue-200">Active</Badge>}</TableCell>
+                        <TableCell className="text-foreground">{durLabel}</TableCell>
+                        <TableCell>{ev.shift_id ? <Button variant="ghost" size="sm" className="text-blue-700 hover:text-blue-700 h-7 px-2 text-xs font-mono" onClick={() => navigate(`/shifts/${ev.shift_id}`)}>{ev.shift_id.slice(0, 8)}…</Button> : '—'}</TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">Page {statusPage} of {totalStatusPages}</p>
+                <p className="text-sm text-muted-foreground">Page {statusPage} of {totalStatusPages}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={statusPage === 1} onClick={() => setStatusPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                  <Button variant="ghost" size="sm" className="text-gray-300" disabled={statusPage >= totalStatusPages} onClick={() => setStatusPage((p) => Math.min(totalStatusPages, p + 1))}>Next</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={statusPage === 1} onClick={() => setStatusPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                  <Button variant="ghost" size="sm" className="text-foreground" disabled={statusPage >= totalStatusPages} onClick={() => setStatusPage((p) => Math.min(totalStatusPages, p + 1))}>Next</Button>
                 </div>
               </div>
             </CardContent>

@@ -549,19 +549,19 @@ export function DriversPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="portalPage space-y-6">
       {/* Error message */}
       {error && (
-        <Card className="bg-red-950 border-red-900">
-          <CardContent className="p-4 text-red-400">{error}</CardContent>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">{error}</CardContent>
         </Card>
       )}
 
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Drivers</h1>
-          <p className="text-gray-400">Manage your driver fleet</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Drivers</h1>
+          <p className="text-muted-foreground">Manage your driver fleet</p>
         </div>
         <Button
           onClick={() => setDialogOpen(true)}
@@ -574,22 +574,22 @@ export function DriversPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Total Drivers</p>
-            <p className="text-3xl font-bold text-white">{loading ? '-' : totalCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Total Drivers</p>
+            <p className="text-3xl font-bold text-foreground">{loading ? '-' : totalCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Active Drivers</p>
-            <p className="text-3xl font-bold text-green-400">{loading ? '-' : activeCount}</p>
+            <p className="text-sm text-muted-foreground mb-1">Active Drivers</p>
+            <p className="text-3xl font-bold text-green-700">{loading ? '-' : activeCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <p className="text-sm text-gray-400 mb-1">Offline</p>
-            <p className="text-3xl font-bold text-blue-400">
+            <p className="text-sm text-muted-foreground mb-1">Offline</p>
+            <p className="text-3xl font-bold text-blue-700">
               {loading ? '-' : totalCount - activeCount}
             </p>
           </CardContent>
@@ -597,23 +597,23 @@ export function DriversPage() {
       </div>
 
       {/* Drivers table */}
-      <Card className="bg-[#FFFEFA] border-[#D7D3CA]">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-white">All Drivers</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className="text-foreground">All Drivers</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Shift duration is calculated from active shift start time.
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search drivers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-[#F5F2EB] border-[#C4C0B7] text-white placeholder:text-gray-500"
+                className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -627,20 +627,20 @@ export function DriversPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#D7D3CA] hover:bg-transparent">
-                    <TableHead className="text-gray-400">Driver</TableHead>
-                    <TableHead className="text-gray-400">Shift Duration</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400">Break</TableHead>
-                    <TableHead className="text-gray-400">Current Vehicle</TableHead>
-                    <TableHead className="text-gray-400">Current Shift</TableHead>
-                    <TableHead className="text-gray-400 text-right">View Profile</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Driver</TableHead>
+                    <TableHead className="text-muted-foreground">Shift Duration</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Break</TableHead>
+                    <TableHead className="text-muted-foreground">Current Vehicle</TableHead>
+                    <TableHead className="text-muted-foreground">Current Shift</TableHead>
+                    <TableHead className="text-muted-foreground text-right">View Profile</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedDrivers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No drivers found
                       </TableCell>
                     </TableRow>
@@ -652,40 +652,40 @@ export function DriversPage() {
                         const activeShift = driverId ? activeShiftMap[driverId] : undefined;
                         const isOnBreak = activeShift ? Boolean(breakByShiftId[activeShift.id]) : false;
                         return (
-                          <TableRow key={driver.driver_id ?? driverId} className="border-[#D7D3CA]">
-                            <TableCell className="font-medium text-white">
+                          <TableRow key={driver.driver_id ?? driverId} className="border-border">
+                            <TableCell className="font-medium text-foreground">
                               <div>
                                 <p>{driver.full_name ?? driver.profile_email ?? driver.email ?? driver.driver_id}</p>
-                                <p className="text-xs text-gray-500">{driver.profile_email ?? driver.email}</p>
+                                <p className="text-xs text-muted-foreground">{driver.profile_email ?? driver.email}</p>
                               </div>
                             </TableCell>
-                            <TableCell className="text-gray-300">
+                            <TableCell className="text-foreground">
                               {getShiftDurationLabel(activeShift)}
                             </TableCell>
                             <TableCell>
                               {status?.status_state ? (
-                                <Badge className="bg-blue-950 text-blue-300 border-blue-800">
+                                <Badge className="bg-blue-50 text-blue-700 border-blue-200">
                                   {status.status_state}
                                 </Badge>
                               ) : (
-                                <Badge className="bg-gray-900 text-gray-300 border-[#C4C0B7]">Unknown</Badge>
+                                <Badge className="bg-muted text-foreground border-input">Unknown</Badge>
                               )}
                             </TableCell>
                             <TableCell>
                               {isOnBreak ? (
-                                <Badge className="bg-amber-950 text-amber-300 border-amber-800">On Break</Badge>
+                                <Badge className="bg-amber-50 text-amber-800 border-amber-200">On Break</Badge>
                               ) : (
-                                <Badge className="bg-gray-900 text-gray-300 border-[#C4C0B7]">No</Badge>
+                                <Badge className="bg-muted text-foreground border-input">No</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-gray-300">
+                            <TableCell className="text-foreground">
                               {driver.current_vehicle_rego || 'None'}
                             </TableCell>
-                            <TableCell className="text-gray-300">
+                            <TableCell className="text-foreground">
                               {activeShift ? (
-                                <Badge className="bg-blue-950 text-blue-300 border-blue-800">On Shift</Badge>
+                                <Badge className="bg-blue-50 text-blue-700 border-blue-200">On Shift</Badge>
                               ) : (
-                                <Badge className="bg-gray-900 text-gray-300 border-[#C4C0B7]">Off Shift</Badge>
+                                <Badge className="bg-muted text-foreground border-input">Off Shift</Badge>
                               )}
                             </TableCell>
                             <TableCell>
@@ -695,7 +695,7 @@ export function DriversPage() {
                                     asChild
                                     variant="ghost"
                                     size="sm"
-                                    className="text-gray-300 hover:text-emerald-400"
+                                    className="text-foreground hover:text-emerald-700"
                                   >
                                     <Link to={`/drivers/${driverId}`}>
                                       View profile
@@ -705,7 +705,7 @@ export function DriversPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-gray-400 hover:text-blue-400 h-8 w-8 p-0"
+                                  className="text-muted-foreground hover:text-blue-700 h-8 w-8 p-0"
                                   onClick={() => {
                                     openVehicleModal(driver);
                                   }}
@@ -715,7 +715,7 @@ export function DriversPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-gray-400 hover:text-[#BE1C2D] h-8 w-8 p-0"
+                                  className="text-muted-foreground hover:text-[#BE1C2D] h-8 w-8 p-0"
                                   onClick={() => {
                                     setPasswordDriver(driver);
                                     setPasswordDialogOpen(true);
@@ -726,7 +726,7 @@ export function DriversPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
+                                  className="text-muted-foreground hover:text-red-700 h-8 w-8 p-0"
                                   onClick={() => handleDeleteClick(driver)}
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -740,21 +740,21 @@ export function DriversPage() {
                   )}
                       {/* Edit Vehicle Assignment Dialog */}
                       <Dialog open={isVehicleModalOpen} onOpenChange={setIsVehicleModalOpen}>
-                        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+                        <DialogContent className="bg-card border-border">
                           <DialogHeader>
-                            <DialogTitle className="text-white">Change Assigned Vehicle</DialogTitle>
-                            <DialogDescription className="text-gray-400">
+                            <DialogTitle className="text-foreground">Change Assigned Vehicle</DialogTitle>
+                            <DialogDescription className="text-muted-foreground">
                               Assign a different vehicle to this driver
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <div>
-                              <Label htmlFor="vehicle-assignment-select" className="text-gray-300">Vehicle</Label>
+                              <Label htmlFor="vehicle-assignment-select" className="text-foreground">Vehicle</Label>
                               <select
                                 id="vehicle-assignment-select"
                                 value={String(selectedVehicleId || '')}
                                 onChange={(e) => setSelectedVehicleId(String(e.target.value))}
-                                className="w-full bg-[#F5F2EB] border border-[#C4C0B7] text-white p-2 rounded"
+                                className="w-full bg-background border border-input text-foreground p-2 rounded"
                               >
                                 <option value="">None</option>
                                 {vehicles.map((vehicle) => {
@@ -795,17 +795,17 @@ export function DriversPage() {
 
       {/* Set Driver Password Dialog */}
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Set Driver Password</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Set Driver Password</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               A password reset link will be emailed to the selected driver.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-300">Driver</Label>
-              <div className="text-sm text-gray-200">
+              <Label className="text-foreground">Driver</Label>
+              <div className="text-sm text-foreground">
                 {passwordDriver?.full_name ?? passwordDriver?.profile_email ?? passwordDriver?.email ?? 'Selected driver'}
               </div>
             </div>
@@ -822,50 +822,50 @@ export function DriversPage() {
 
       {/* Add Driver Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Add Driver</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Add Driver</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Create a new driver in the system
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-300">Full Name</Label>
+              <Label className="text-foreground">Full Name</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="John Smith"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <div>
-              <Label className="text-gray-300">Email</Label>
+              <Label className="text-foreground">Email</Label>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="john@example.com"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <div>
-              <Label className="text-gray-300">Password</Label>
+              <Label className="text-foreground">Password</Label>
               <Input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="Password"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <div>
-              <Label className="text-gray-300">Phone (optional)</Label>
+              <Label className="text-foreground">Phone (optional)</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+1 234-567-8900"
-                className="bg-[#F5F2EB] border-[#C4C0B7] text-white"
+                className="bg-background border-input text-foreground"
               />
             </div>
             <Button
@@ -880,20 +880,20 @@ export function DriversPage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
-        <AlertDialogContent className="bg-[#FFFEFA] border-[#D7D3CA]">
+        <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Driver</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-foreground">Delete Driver</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Are you sure you want to delete {driverToDelete?.full_name ?? driverToDelete?.profile_email ?? driverToDelete?.driver_id}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-4">
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">
+            <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-700 text-white hover:bg-red-800"
             >
               Delete
             </AlertDialogAction>

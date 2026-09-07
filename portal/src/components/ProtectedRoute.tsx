@@ -12,10 +12,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0F0F0F]">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center" role="status">
           <div className="w-16 h-16 border-4 border-[#BE1C2D] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-muted-foreground">Opening your admin workspace…</p>
         </div>
       </div>
     );
